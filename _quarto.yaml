@@ -35,8 +35,9 @@ chapter_status:
   ch12_skill_arch: { status: final_draft, review: self, date: "2026-03-28" }
   ch13_claude_md: { status: final_draft, review: self, date: "2026-03-28" }
   ch14_validation: { status: final_draft, review: self, date: "2026-03-28" }
-  ch15_multi_agent: { status: draft, review: none, date: "" }
-  ch16_hooks: { status: draft, review: none, date: "" }
+  ch15_multi_agent: { status: final_draft, review: self, date: "2026-03-28" }
+  ch16_hooks: { status: final_draft, review: self, date: "2026-03-28" }
+  ch17_openclaw: { status: draft, review: none, date: "" }
   ch17_openclaw: { status: draft, review: none, date: "" }
   ch18_governance: { status: draft, review: none, date: "" }
   ch19_hybrid: { status: draft, review: none, date: "" }
