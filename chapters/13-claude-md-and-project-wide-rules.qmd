@@ -1,0 +1,326 @@
+# Chapter 13: CLAUDE.md and Project-Wide Rules
+
+In the previous chapter, we saw how skills provide modular, on-demand context. Now we address a complementary pattern: **project-level context files** that define the rules, standards, and conventions every AI agent should follow when working in your codebase.
+
+The most important of these is CLAUDE.md — a project specification file that Claude Code reads at startup, similar to how developers use README.md or .editorconfig.
+
+## The Problem: AI Agents Don't Know Your Project's Rules
+
+When an AI agent starts working on a codebase it has never seen, it makes assumptions:
+
+- "I'll write tests my way"
+- "I'll pick a code style"
+- "I'll structure documentation however I think is best"
+- "I'll implement features without checking with anyone"
+
+These assumptions rarely align with the project's actual conventions. The result: inconsistent code, missing tests, documentation that doesn't match the style, and features that don't match requirements.
+
+## The Solution: CLAUDE.md
+
+**CLAUDE.md** is a project file that tells AI agents how to work in your codebase. It's named after Claude Code (the AI coding assistant from Anthropic), but the pattern applies to any AI assistant.
+
+### What CLAUDE.md Contains
+
+```markdown
+# Project Context for Claude Code
+
+## Project Overview
+- Name: MyApp
+- Type: TypeScript/Node.js web application
+- Core functionality: E-commerce platform
+
+## Testing Requirements
+- All features must include tests in `__tests__/` directory
+- Use Vitest for unit tests, Playwright for E2E
+- Minimum 80% code coverage for new code
+- Run tests before committing: `npm test`
+
+## Code Style
+- Use TypeScript strict mode
+- No `any` types - use `unknown` or specific types
+- Prefix test files with the module name: `auth.test.ts`
+- Use functional components in React, no class components
+
+## Documentation
+- Document all public APIs with JSDoc
+- Keep README.md updated with setup instructions
+- Use ADR format for architectural decisions
+
+## Workflow
+- Always run type checks before committing: `npm run typecheck`
+- Use conventional commits: `feat:`, `fix:`, `docs:`
+- Request review before merging PRs
+```
+
+This is not a complete file — it's a starting point. Let's expand each section.
+
+### Structure: Testing, Style, Documentation Requirements
+
+The most effective CLAUDE.md files cover three areas:
+
+#### Testing Requirements
+
+```markdown
+## Testing Requirements
+
+### Unit Tests
+- Framework: Vitest
+- Location: `__tests__/` next to source files
+- Naming: `{module}.test.ts`
+- Run: `npm test` (must pass before commit)
+- Coverage: Minimum 80% for new code
+
+### Integration Tests
+- Location: `tests/integration/`
+- Database: Use test containers (PostgreSQL, Redis)
+- Mock external APIs with MSW
+
+### E2E Tests
+- Framework: Playwright
+- Location: `tests/e2e/`
+- Run: `npm run test:e2e`
+- Must pass in CI before deployment
+```
+
+#### Code Style
+
+```markdown
+## Code Style
+
+### TypeScript
+- Strict mode enabled
+- No `any` - use `unknown` or specific types
+- Explicit return types for public functions
+- Use `interface` over `type` for public APIs
+
+### Formatting
+- Use Prettier with config in `.prettierrc`
+- Run format before commit: `npm run format`
+
+### Naming
+- PascalCase for components and classes
+- camelCase for variables and functions
+- SCREAMING_SNAKE_CASE for constants
+- Prefix interfaces with `I`: `IUserService`
+```
+
+#### Documentation
+
+```markdown
+## Documentation
+
+### Required Documentation
+- README.md: Setup, configuration, running locally
+- CONTRIBUTING.md: How to contribute
+- API.md: API endpoints and examples
+- CHANGELOG.md: Version history
+
+### Code Documentation
+- JSDoc for all public APIs
+- Comments for complex logic (explain WHY, not WHAT)
+- TODO comments with ticket numbers
+
+### Architecture Decision Records (ADRs)
+- Location: `docs/adr/`
+- Format: `001-adr-title.md`
+- Required for any significant architectural decision
+```
+
+## Initialisation Files (INITIAL.md) for Feature Requests
+
+Beyond project-wide rules, you can provide **task-specific context** using INITIAL.md files.
+
+### What INITIAL.md Contains
+
+```markdown
+# Feature Request: User Authentication
+
+## Problem
+Users cannot securely authenticate. We need email/password + OAuth.
+
+## Requirements
+1. Email/password login with bcrypt hashing
+2. OAuth via Google and GitHub
+3. JWT tokens with 1-hour expiry
+4. Refresh tokens with 7-day expiry
+5. Password reset via email
+
+## Technical Constraints
+- Use existing PostgreSQL database
+- Reuse `User` table, add OAuth columns
+- Integrate with existing email service
+- Follow auth patterns in `src/auth/`
+
+## Out of Scope
+- Two-factor authentication (v2)
+- Social login beyond Google/GitHub (v2)
+- User management dashboard (v2)
+
+## Success Criteria
+- [ ] Users can register with email/password
+- [ ] Users can login with Google OAuth
+- [ ] Users can login with GitHub OAuth
+- [ ] JWT tokens are validated on API calls
+- [ ] All tests pass
+```
+
+### How INITIAL.md Works
+
+When starting a new feature, create an INITIAL.md in the feature branch:
+
+```bash
+git checkout -b feature/user-auth
+cat > INITIAL.md << 'EOF'
+# Feature Request: User Authentication
+...
+EOF
+```
+
+The AI agent reads INITIAL.md and uses it as the task specification.
+
+## Examples Folder as the Source of Truth
+
+Words can be ambiguous. Code examples are not. An **examples/** folder shows the AI agent exactly what you expect.
+
+### Folder Structure
+
+```
+examples/
+├── auth/
+│   ├── auth-service.ts      # Example service
+│   ├── auth-controller.ts   # Example controller  
+│   └── auth.test.ts         # Example test
+├── api/
+│   └── rest-endpoint.ts    # Example REST endpoint
+├── components/
+│   └── react-component.tsx  # Example component
+└── database/
+    └── prisma-query.ts     # Example database query
+```
+
+### Using Examples in CLAUDE.md
+
+```markdown
+## Examples
+When implementing new features, reference examples in `examples/`:
+- Auth: `examples/auth/auth-service.ts`
+- API: `examples/api/rest-endpoint.ts`
+- Components: `examples/components/react-component.tsx`
+```
+
+This prevents "I didn't know the pattern" problems.
+
+## The PRP (Product Requirements Prompt) Workflow Pattern
+
+The **PRP** (Product Requirements Prompt) is a structured way to give AI agents complete context for building features.
+
+### PRP Template
+
+```markdown
+# Product Requirements Prompt: {Feature Name}
+
+## Problem Statement
+{1-2 sentences describing the problem this feature solves}
+
+## User Story
+As a {type of user}, I want {capability}, so that {benefit}.
+
+## Acceptance Criteria
+- [ ] {Specific, testable criterion}
+- [ ] {Another criterion}
+- [ ] {Edge case to handle}
+
+## Technical Requirements
+- {Technical constraint 1}
+- {Technical constraint 2}
+
+## Dependencies
+- {Other features/components this depends on}
+- {External services/APIs needed}
+
+## Out of Scope
+- {What NOT to implement}
+
+## Success Metrics
+- {How we'll measure success}
+```
+
+### PRP Workflow
+
+1. **Create PRP** before starting work (like this INITIAL.md above)
+2. **Agent reads PRP** and asks clarifying questions
+3. **Iterate** until PRP is complete
+4. **Agent implements** against acceptance criteria
+5. **Verify** against PRP before considering done
+
+## Beyond Claude Code: Applying Patterns to Other AI Assistants
+
+The CLAUDE.md pattern works with other AI coding assistants:
+
+| Assistant | Config File | Location |
+|-----------|-------------|----------|
+| Claude Code | CLAUDE.md | Project root |
+| Cursor | .cursorrules | Project root |
+| Windsurf | .windsurf | Project root |
+| VS Code Copilot | copilot.md | .github/ |
+
+### Universal Template
+
+```markdown
+# Project Rules
+
+## About
+- Project name and type
+- What it does
+
+## Coding Standards
+- Language-specific rules
+- Testing requirements
+
+## Workflow
+- How to contribute
+- Commit conventions
+
+## Useful Commands
+- `npm test`
+- `npm run build`
+- etc.
+```
+
+## Core Principle: Provide Full Screenplay, Not Sticky Notes
+
+The fundamental principle: **be explicit, not implicit**.
+
+❌ **Bad** (sticky notes):
+```
+Write tests for new code.
+```
+
+✅ **Good** (full screenplay):
+```
+All new code must include:
+- Unit tests in __tests__/ with 80% coverage
+- Run `npm test` before committing
+- Use describe/it syntax from Vitest
+- Mock external services with vi.mock()
+```
+
+The difference is specificity. Sticky notes leave room for interpretation. Full screenplay removes it.
+
+## Summary: Project-Level Context
+
+CLAUDE.md and related files provide the project-level context that skills don't cover:
+
+1. **CLAUDE.md**: Project-wide rules for testing, style, documentation
+2. **INITIAL.md**: Task-specific context for features
+3. **examples/**: Concrete code examples showing expected patterns
+4. **PRP workflow**: Structured requirements that AI agents can verify against
+
+These patterns ensure AI agents work the way you expect — not the way they assume.
+
+## Key Sources
+
+- Claude Code documentation
+- Anthropic's AI engineering best practices
+- PRP pattern from context engineering community
+- Zestic AI framework on artefact governance
