@@ -33,8 +33,8 @@ chapter_status:
   ch10_token_budget: { status: final_draft, review: self, date: "2026-03-28" }
   ch11_compression: { status: final_draft, review: self, date: "2026-03-28" }
   ch12_skill_arch: { status: final_draft, review: self, date: "2026-03-28" }
-  ch13_claude_md: { status: draft, review: none, date: "" }
-  ch14_validation: { status: draft, review: none, date: "" }
+  ch13_claude_md: { status: final_draft, review: self, date: "2026-03-28" }
+  ch14_validation: { status: final_draft, review: self, date: "2026-03-28" }
   ch15_multi_agent: { status: draft, review: none, date: "" }
   ch16_hooks: { status: draft, review: none, date: "" }
   ch17_openclaw: { status: draft, review: none, date: "" }
