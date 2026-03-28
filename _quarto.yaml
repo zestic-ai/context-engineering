@@ -2,6 +2,48 @@ project:
   type: book
   output-dir: _book
 
+# Zestic Publishing Status
+# Stage: draft (v0.x) → final draft (v1.0-rc) → release (v1.0+)
+# Quality gates: peer review → internal review → publish
+
+metadata:
+  stage: draft
+  version: "0.1.0"
+  last_updated: "2026-03-28"
+  word_count_approx: 22000
+  chapters_complete: 11
+  chapters_total: 22
+  appendices_planned: 7
+  review_status: "Self-reviewed, peer review pending"
+
+# Chapter Status Tracking (Zestic quality gates)
+# Status: draft | final_draft | release
+# Review: self | peer | internal | external
+chapter_status:
+  introduction: { status: final_draft, review: self, date: "2026-03-28" }
+  ch01_ai_fails: { status: final_draft, review: self, date: "2026-03-28" }
+  ch02_context_means: { status: final_draft, review: self, date: "2026-03-28" }
+  ch03_discipline: { status: final_draft, review: self, date: "2026-03-28" }
+  ch04_architecture: { status: final_draft, review: self, date: "2026-03-28" }
+  ch05_kg_explained: { status: final_draft, review: self, date: "2026-03-28" }
+  ch06_deterministic: { status: final_draft, review: self, date: "2026-03-28" }
+  ch07_terraphim: { status: final_draft, review: self, date: "2026-03-28" }
+  ch08_building_kg: { status: final_draft, review: self, date: "2026-03-28" }
+  ch09_grounding: { status: final_draft, review: self, date: "2026-03-28" }
+  ch10_token_budget: { status: final_draft, review: self, date: "2026-03-28" }
+  ch11_compression: { status: final_draft, review: self, date: "2026-03-28" }
+  ch12_skill_arch: { status: draft, review: none, date: "" }
+  ch13_claude_md: { status: draft, review: none, date: "" }
+  ch14_validation: { status: draft, review: none, date: "" }
+  ch15_multi_agent: { status: draft, review: none, date: "" }
+  ch16_hooks: { status: draft, review: none, date: "" }
+  ch17_openclaw: { status: draft, review: none, date: "" }
+  ch18_governance: { status: draft, review: none, date: "" }
+  ch19_hybrid: { status: draft, review: none, date: "" }
+  ch20_practice: { status: draft, review: none, date: "" }
+  ch21_market: { status: draft, review: none, date: "" }
+  ch22_future: { status: draft, review: none, date: "" }
+
 book:
   title: "Context Engineering"
   subtitle: "The Discipline Behind Effective AI Software Development"
