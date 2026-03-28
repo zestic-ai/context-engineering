@@ -13,6 +13,7 @@ book:
   
   chapters:
     - index.qmd
+    - chapters/introduction.qmd
     - chapters/01-why-ai-software-projects-fail-differently.qmd
     - chapters/02-what-context-actually-means-in-ai-development.qmd
     - chapters/03-context-engineering-as-a-discipline.qmd

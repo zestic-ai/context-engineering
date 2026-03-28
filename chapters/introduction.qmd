@@ -1,0 +1,96 @@
+# Introduction
+
+In the spring of 2024, a remarkable thing happened in the software industry. Organizations that had spent decades building sophisticated engineering practices—statistical process control, test-driven development, continuous integration—looked at their new AI systems and said, essentially, "Let's just see what the prompt does."
+
+The results were predictable. Some worked. Most didn't. Those that worked in development failed in production. Those that worked in production revealed failures that had been invisible in testing. The common pattern was not technical failure—it was **conceptual failure**. The systems were operating on context that was misaligned with reality, and no one had noticed.
+
+This book is about fixing that.
+
+## Why This Book, Why Now
+
+If you are building software with large language models in 2026, you are participating in one of the most significant shifts in the history of software development. For the first time, we are building systems whose behavior is not fully specified by code. The "software" is not the lines we write—it is the interaction between our prompts, our knowledge bases, our retrieval systems, and the model's emergent capabilities.
+
+This is exhilarating. It is also terrifying.
+
+The excitement is warranted. AI systems can now do things that were science fiction a year ago: write code, analyze documents, reason through multi-step problems, engage in dialogue that feels human. The potential for productivity, for creativity, for solving previously intractable problems is enormous.
+
+But the enthusiasm has outpaced the methodology. We are building systems with the casualness of prototypes but the expectations of production. We are treating "prompt engineering" as if it were a real engineering discipline when it is, at best, a guess in the dark.
+
+The result is a growing body of evidence that AI software in production is unreliable in ways that traditional software is not. Not because the technology doesn't work—it does. But because we have not yet developed the engineering disciplines that the technology requires.
+
+This book presents those disciplines. We call it **Context Engineering**.
+
+## What Is Context Engineering
+
+Context Engineering is the discipline of making AI systems reliable by explicitly managing the context they operate on.
+
+This is not "prompt engineering." Prompt engineering focuses on optimizing the input prompt to get better outputs. Context Engineering is broader: it encompasses everything that shapes the AI's understanding—prompts, yes, but also knowledge bases, retrieval systems, validation gates, token budgets, and governance frameworks.
+
+The key insight is that **context is infrastructure**. Just as code is infrastructure that must be versioned, tested, and validated, context is infrastructure that must be designed, managed, and monitored. When context fails, the AI fails—even if the code is perfect.
+
+## What You Will Learn
+
+This book is organized into six parts, progressing from foundational understanding to practical implementation:
+
+**Part I: The Context Problem** (Chapters 1-4)
+- Why AI software fails differently than traditional software
+- What "context" actually means in AI development
+- Why context engineering is a necessary discipline
+- How to architect meaning through explicit modelling
+
+**Part II: Knowledge Graphs as Context Infrastructure** (Chapters 5-9)
+- Understanding knowledge graphs and their role in AI
+- The critical comparison: deterministic search vs vector embeddings
+- How Terraphim's graph embeddings achieve 100% accuracy
+- Building knowledge graphs for your context
+- Using knowledge graphs as safety gates against hallucination
+
+**Part III: Context Optimization Tools** (Chapters 10-12)
+- Token budget architecture: managing the finite context window
+- Compression strategies: prioritizing what matters
+- Skill architecture: on-demand loading for efficiency
+
+**Part IV: Implementation Patterns** (Chapters 13-16)
+- CLAUDE.md and project-wide rules
+- Validation and quality gates
+- Multi-agent context management
+- Hooks and automation
+
+**Part V: Real-World Applications** (Chapters 17-20)
+- The OpenClaw context system
+- Enterprise context governance
+- Hybrid pipeline patterns
+- Building a context engineering practice
+
+**Part VI: The Future of Context** (Chapters 21-22)
+- The knowledge graph market landscape
+- Open problems and research directions
+
+## How to Read This Book
+
+This book is designed to be read in order, but it is also designed to be referenced.
+
+If you are new to AI software development, start from the beginning. The foundational chapters establish the conceptual framework that makes everything else make sense.
+
+If you are already building AI systems and encountering specific problems, you can jump to relevant chapters. The token budget chapter (10) is useful if you're hitting context limits. The knowledge graph chapters (5-9) are essential if you're struggling with retrieval quality. The governance chapter (18) is critical if you're deploying to regulated environments.
+
+If you are a technical architect or engineering leader, pay special attention to Part IV and V. These chapters translate concepts into patterns you can implement.
+
+## A Note on Sources
+
+This book draws from multiple sources:
+
+- **Real systems**: OpenClaw (the AI assistant system I maintain), Terraphim (knowledge graph platform), various enterprise deployments
+- **Case studies**: The MedGemma competition (where knowledge graph grounding prevented a dangerous 10x dosage error), enterprise RAG failures and successes
+- **Research**: Microsoft GraphRAG, academic literature on knowledge graphs, vector embeddings, and AI safety
+- **Practitioner experience**: Lessons learned from building AI systems in production
+
+Where possible, I cite primary sources. Where I draw on experience, I try to make the underlying principles explicit so you can apply them to your context.
+
+## The Journey Ahead
+
+Context Engineering is not a solved field. It is an emerging discipline, and much remains to be discovered, tested, and validated. What this book offers is a framework—a way of thinking about AI reliability that has worked in practice and that I believe is directionally correct.
+
+The journey from "just prompting" to engineering-disciplined AI is not easy. But it is necessary. The alternative—unreliable AI systems in production, accumulating technical debt and semantic drift—is not acceptable for systems that make decisions affecting people's lives, health, and livelihoods.
+
+Let us begin.
