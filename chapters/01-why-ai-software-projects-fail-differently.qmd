@@ -1,0 +1,264 @@
+# Chapter 1: Why AI Software Projects Fail Differently
+
+**Working Title:** *Context Engineering: The Discipline Behind Effective AI Software Development*
+
+**Target Audience:** Senior developers, engineering managers, technical architects, and AI-focused practitioners building software with LLMs.
+
+**Estimated Length:** 45,000-55,000 words (technical/mid-form)
+
+---
+
+## PART I: FOUNDATIONS — THE CONTEXT PROBLEM
+
+### Chapter 1: Why AI Software Projects Fail Differently
+- Traditional software failure modes: bugs, schedule, scope
+- AI software failure modes: context drift, hallucination, semantic misalignment
+- The illusion of simplicity in LLM interfaces
+- Case studies: Enterprise projects where context collapsed
+- The "AI slope" and the trap of deceptively simple UIs
+- Understanding context complexity vs code complexity
+- **Concept modelling crash course**: Entities, relationships, constraints — the vocabulary that shapes every AI interaction
+
+### Chapter 2: What "Context" Actually Means in AI Development
+- Multi-dimensional context: domain, technical, operational, commercial
+- Context as the intersection of assumptions, interpretations, constraints
+- Why context expands faster than it can be structured (entropy)
+- The role of stakeholder reinterpretation in downstream drift
+- AI-specific context variables: model versions, prompt evolution, training data shifts
+
+### Chapter 3: Context Engineering as a Discipline
+- Distinguishing context engineering from prompt engineering
+- Distinguishing from "vibe coding" and "prompt engineering" extremes
+- Historical roots: Engineering control (1960s), DDD (2000s), configuration management
+- The Zestic AI framework: domain model as semantic backbone
+- Why context engineering is the missing discipline
+- The cost of ignoring it: structural debt, compounding misalignment
+
+### Chapter 4: The Architecture of Meaning
+- Artefacts as decision containers (not documentation)
+- Reconciled domain models as the anchor
+- Baselining and version control for semantic alignment
+- Separating commercial context from technical context
+- The separation of account management and engineering
+- Why each lifecycle stage requires a different inference context
+- **Concept modelling fundamentals**: Entity types, relationship cardinalities, invariants, and how they translate to AI context boundaries
+
+---
+
+## PART II: KNOWLEDGE GRAPHS AS CONTEXT INFRASTRUCTURE
+
+### Chapter 5: Knowledge Graphs Explained
+- What is a knowledge graph? Nodes, edges, and semantic relationships
+- Historical context: Google's knowledge graph, enterprise ontologies
+- The resurgence of knowledge graphs in the AI era (GraphRAG 2024-2025)
+- Knowledge graphs vs vector databases: complementary approaches
+- The role of ontologies and controlled vocabularies
+- Case study: SNOMED CT in healthcare AI
+
+### Chapter 6: Deterministic Search vs Vector Embeddings
+- How vector embeddings work: similarity in high-dimensional space
+- The embedding problem: probabilistic approximations, not deterministic mappings
+- Information loss in compression: 1000-node graph → 128-dimensional vector
+- No explainability: "vectors are close" vs explicit relationship tracing
+- The Cleora problem and similar graph embedding systems
+- Latency, memory, and cost comparison
+
+### Chapter 7: Terraphim Graph Embeddings: The 100% Accurate Approach
+- Explicit relationships vs inferred similarity
+- Deterministic ranking: same query → same results
+- Explainable results: trace exactly why a document matched
+- No information loss: full graph structure preserved
+- Role-based graphs: different synonym edges per context role
+- The Aho-Corasick automata approach (1.4M+ patterns, <200ms search)
+- How the graph scorer works: connectivity-based ranking
+
+### Chapter 8: Building a Knowledge Graph for Context
+- Defining nodes: concepts, documents, terms, entities
+- Defining edges: synonym relationships, hierarchical relations
+- The vocabulary-first approach: pre-defined terms vs LLM extraction
+- Schema design: base schema + project-type extensions
+- Validation: JSON Schema with local $ref resolution
+- Building the thesaurus: synonym expansion patterns
+- Practical example: CTO Executive System knowledge graph (~500 terms)
+- **Concept modelling in practice**: From domain model to KG schema — entities, attributes, relationships, constraints
+
+### Chapter 9: Knowledge Graph Grounding as Safety Gate
+- The MedGemma competition case study: 800mg vs 80mg dose
+- How KG grounding prevents hallucination at scale
+- The gate pattern: LLM generates → KG validates → grounded output
+- Explainable to regulators: deterministic matching traces
+- Real-world: 543 passing tests, 18/18 evaluation cases
+- Building the validation pipeline
+
+---
+
+## PART III: CONTEXT OPTIMIZATION TOOLS
+
+### Chapter 10: Token Budget Architecture
+- The 12,000 token rule and progressive disclosure
+- Constitutional context: what never gets compressed (AGENTS.md, SOUL.md)
+- Layered loading: skill catalog → full SKILL.md → compression
+- Token tracking and monitoring systems
+- Allocation per context type: Constitutional, Skill Catalog, Active Skills, Memory, Working, Buffer
+
+### Chapter 11: Compression Strategies (Priority Order)
+1. **Deduplication** — Remove identical content across skills
+2. **Summarization** — Condense examples, troubleshooting, verbose explanations
+3. **Truncation** — Cut from oldest non-constitutional content
+4. **Drop** — LRU eviction of inactive skills
+- Building a compression pipeline
+- When to compress: pre-LLM vs post-LLM
+
+### Chapter 12: Skill Architecture for AI Agents
+- Lightweight skill catalogs (~50 tokens at startup)
+- On-demand activation patterns: trigger-based loading
+- Auto-deactivation rules (10 turns of non-use)
+- Maximum 5 active skills simultaneously
+- Building the skill taxonomy: naming, triggers, metadata
+
+---
+
+## PART IV: IMPLEMENTATION PATTERNS
+
+### Chapter 13: CLAUDE.md and Project-Wide Rules
+- Structure: testing, style, documentation requirements
+- Initialisation files (INITIAL.md) for feature requests
+- Examples folder as the source of truth
+- The PRP (Product Requirements Prompt) workflow pattern
+- Beyond Claude Code: applying patterns to other AI assistants
+- Core principle: provide full screenplay, not sticky notes
+
+### Chapter 14: Validation and Quality Gates
+- KLS (Knowledge Layer Schema) validation protocol
+- Pre-LLM validation layers: syntax, semantics, grounding
+- Drift detection: monitoring context changes over time
+- Impact analysis: what changes affect what
+- Integration with CI/CD pipelines
+
+### Chapter 15: Multi-Agent Context Management
+- Sub-agent orchestration patterns in Claude Code
+- Session persistence and memory across turns
+- Context isolation vs shared context tradeoffs
+- Terraphim knowledge graph integration for agents
+- The meta-cortex concept: agent-to-agent communication
+
+### Chapter 16: Hooks and Automation for Context
+- Session hooks: before/after LLM calls
+- Tool use hooks: validation, logging, correction
+- Claude Code hooks: mcp-hook, pre-tool-use, post-tool-use
+- Continuous learning from agent interactions
+- Building the hook taxonomy
+
+---
+
+## PART V: REAL-WORLD APPLICATIONS
+
+### Chapter 17: The OpenClaw Context System
+- Workspace architecture: memory/, skills/, kg/, primitives/
+- HEARTBEAT.md for autonomous agent loops
+- MEMORY.md as long-term context (not loaded in shared sessions)
+- Security and credentials handling (.clawdbot/)
+- Triage: email, calendar, notifications integration
+- Session logs and continuity patterns
+
+### Chapter 18: Enterprise Context Governance
+- Stage-gated lifecycles: discovery → design → development → deployment
+- Artefact reconciliation at each gate
+- Change request impact analysis
+- AI lifecycle management: prompt versioning, data config, drift monitoring
+- The "configuration manager" AI agent concept
+- Metrics: what constitutes good context health
+
+### Chapter 19: Hybrid Pipeline Patterns
+- When to use deterministic search (known vocabulary)
+- When to use LLM-powered search (open-ended queries)
+- The 80/20 split: deterministic for most, LLM for complex
+- Building the routing layer
+- Cost optimization: zero per-query for deterministic
+
+### Chapter 20: Building a Context Engineering Practice
+- Roles: context engineer, knowledge graph architect, prompt manager
+- Hiring and training context engineers
+- Measuring context health: drift indicators, reconciliation success
+- Anti-patterns: when context engineering becomes bureaucracy
+- Scaling across teams: governance, standards, tooling
+
+---
+
+## PART VI: THE FUTURE OF CONTEXT
+
+### Chapter 21: The Knowledge Graph Market Landscape
+- GraphRAG (Microsoft) approach: LLM-based extraction
+- Google Knowledge Graph: 40%+ of queries after 12 years
+- Enterprise ontologies: SNOMED CT, medical AI returning to structured terms
+- Why enterprises are moving beyond naive RAG (2023-2024 lessons)
+- Regulation drivers: EU AI Act, FDA, FCA requiring explainability
+- The hybrid pipeline: OWL reasoners + property graphs
+
+### Chapter 22: Open Problems and Research Directions
+- Cross-context coherence: maintaining alignment across sessions
+- Real-time context updates: hot-reloading knowledge graphs
+- Multi-modal context: images, diagrams, code as first-class citizens
+- Privacy-preserving context: local-first, encrypted knowledge
+- Benchmarking context engineering: what metrics matter?
+
+---
+
+## APPENDICES
+
+- **Appendix A:** Context Optimizer Skill (SKILL.md) — Full implementation
+- **Appendix B:** Token Tracker Implementation — Code reference
+- **Appendix C:** Skill Catalog Schema — YAML format
+- **Appendix D:** Knowledge Graph Schema — JSON-LD example
+- **Appendix E:** Context Health Checklist — Evaluation rubric
+- **Appendix F:** Resources and Tools — Software, papers, communities
+- **Appendix G:** Glossary — Key terms defined
+
+---
+
+## Key Sources to Cite
+
+### Primary Sources
+1. **coleam00/context-engineering-intro** — Claude Code approach, PRP workflow
+2. **Zestic AI: "Context Engineering: The Missing Discipline"** — Core framework
+3. **Agent Design is Still Hard** (Armin Ronacher) — Why agent design fails
+
+### Knowledge Graph Sources
+4. **Microsoft GraphRAG** — Graph-structured retrieval paper
+5. **Terraphim AI documentation** — Graph embeddings, RoleGraph, automata
+6. **Knowledge Graph Resurgence** (knowledge-garden trends) — Market analysis
+7. **Deterministic vs Embedding** — Head-to-head comparison
+8. **MedGemma competition** — KG grounding proof point (800mg → 80mg)
+
+### Implementation Sources
+9. **Claude Code hooks and automation patterns**
+10. **OpenClaw context architecture**
+11. **KLS validation protocol**
+12. **Context-optimizer skill** (existing implementation)
+
+### Market & Trends
+13. **GraphRAG validation** (Microsoft 2024-2025)
+14. **RAG fatigue** — Enterprise lessons learned
+15. **Ontology tools maturation** — Atomic Server, Protege, TopBraid
+
+---
+
+## Writing Process Notes
+
+- **Draft location:** `cto-executive-system/memory/books/` or `drafts/`
+- **Review process:** Run against existing KLS validation protocol
+- **Tooling sync:** Ensure references sync with terraphim-skills
+- **Publication:** Use existing KDP workflow (book-marketing-plan.md available)
+- **Audience calibration:** Balance theoretical depth with practical implementation
+- **Word count target:** 45,000-55,000 words allows for KG deep-dive
+
+---
+
+## Differentiation from Existing Content
+
+This book differs from existing context-engineering resources by:
+1. **Integration of knowledge graphs** as first-class context infrastructure (not just RAG)
+2. **Deterministic vs embedding comparison** with concrete proof points (MedGemma)
+3. **Practical implementation** from real systems (OpenClaw, Terraphim)
+4. **Enterprise governance** patterns with stage-gated lifecycles
+5. **Safety-focused** with hallucination prevention as core theme

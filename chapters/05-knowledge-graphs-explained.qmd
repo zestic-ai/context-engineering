@@ -1,0 +1,25 @@
+# Chapter 5: Knowledge Graphs Explained
+
+*TODO: Write content*
+
+## Chapter Outline
+
+- What is a knowledge graph? Nodes, edges, and semantic relationships
+- Historical context: Google's knowledge graph, enterprise ontologies
+- The resurgence of knowledge graphs in the AI era (GraphRAG 2024-2025)
+- Knowledge graphs vs vector databases: complementary approaches
+- The role of ontologies and controlled vocabularies
+- Case study: SNOMED CT in healthcare AI
+
+## Key Points to Cover
+
+1. KG basics: entities, relationships, properties
+2. Why KGs matter for AI context
+3. Comparison with vector databases
+4. Real-world enterprise examples
+
+## Sources
+
+- Microsoft GraphRAG paper
+- Terraphim AI documentation
+- SNOMED CT case studies

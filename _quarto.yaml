@@ -1,0 +1,64 @@
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "Context Engineering"
+  subtitle: "The Discipline Behind Effective AI Software Development"
+  author: "Alexander Mikhalev"
+  date: "2026"
+  # cover-image: cover.png
+  # chapter: true
+  # part: true
+  
+  chapters:
+    - index.qmd
+    - chapters/01-why-ai-software-projects-fail-differently.qmd
+    - chapters/02-what-context-actually-means-in-ai-development.qmd
+    - chapters/03-context-engineering-as-a-discipline.qmd
+    - chapters/04-the-architecture-of-meaning.qmd
+    - chapters/05-knowledge-graphs-explained.qmd
+    - chapters/06-deterministic-search-vs-vector-embeddings.qmd
+    - chapters/07-terraphim-graph-embeddings.qmd
+    - chapters/08-building-a-knowledge-graph-for-context.qmd
+    - chapters/09-knowledge-graph-grounding-as-safety-gate.qmd
+    - chapters/10-token-budget-architecture.qmd
+    - chapters/11-compression-strategies.qmd
+    - chapters/12-skill-architecture-for-ai-agents.qmd
+    - chapters/13-claude.md-and-project-wide-rules.qmd
+    - chapters/14-validation-and-quality-gates.qmd
+    - chapters/15-multi-agent-context-management.qmd
+    - chapters/16-hooks-and-automation-for-context.qmd
+    - chapters/17-the-openclaw-context-system.qmd
+    - chapters/18-enterprise-context-governance.qmd
+    - chapters/19-hybrid-pipeline-patterns.qmd
+    - chapters/20-building-a-context-engineering-practice.qmd
+    - chapters/21-the-knowledge-graph-market-landscape.qmd
+    - chapters/22-open-problems-and-research-directions.qmd
+    - appendix/appendix-a.qmd
+    - appendix/appendix-b.qmd
+    - appendix/appendix-c.qmd
+    - appendix/appendix-d.qmd
+    - appendix/appendix-e.qmd
+    - appendix/appendix-f.qmd
+    - appendix/appendix-g.qmd
+
+  appendices:
+    - appendix/appendix-a.qmd
+
+format:
+  html:
+    theme: cosmo
+    highlight: github
+  pdf:
+    documentclass: scrbook
+    fontsize: 11pt
+    papersize: a5
+    mainfont: Open Sans
+    sansfont: Open Sans
+    monofont: JetBrains Mono
+  epub:
+    epub-version: 3
+    # cover-image: cover.png
+
+editor: visual

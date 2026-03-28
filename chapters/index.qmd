@@ -1,0 +1,41 @@
+# Context Engineering
+
+*The Discipline Behind Effective AI Software Development*
+
+**Alexander Mikhalev**
+
+---
+
+## About the Book
+
+This book presents **Context Engineering** as a formal discipline for building reliable AI-powered software. Drawing from real-world case studies—including enterprise deployments, open-source frameworks like OpenClaw and Terraphim, and lessons from the MedGemma competition—it provides a systematic approach to managing the context that AI systems rely on.
+
+The central thesis: **AI software fails differently than traditional software**. While code bugs are deterministic and testable, context drift is invisible, cumulative, and compounds over time. This book shows how to build infrastructure—knowledge graphs, validation pipelines, token budgets, and governance frameworks—to make AI software development as engineering-disciplined as traditional software development.
+
+### Who This Book Is For
+
+- Senior developers building LLM-powered applications
+- Engineering managers overseeing AI projects
+- Technical architects designing AI infrastructure
+- AI practitioners tired of "prompt engineering" as a catch-all
+
+### Topics Covered
+
+- Why AI projects fail differently (context drift, hallucination, semantic misalignment)
+- Knowledge graphs as first-class context infrastructure
+- Deterministic search vs vector embeddings—honest comparison
+- Token budget architecture and compression strategies
+- Validation gates and quality control
+- Enterprise governance patterns
+- Building a context engineering practice
+
+---
+
+## Table of Contents
+
+I. Foundations — The Context Problem
+II. Knowledge Graphs as Context Infrastructure  
+III. Context Optimization Tools
+IV. Implementation Patterns
+V. Real-World Applications
+VI. The Future of Context
