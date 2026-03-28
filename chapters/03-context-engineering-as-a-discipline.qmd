@@ -1,15 +1,143 @@
-# Chapter 3: The Architecture of Meaning
+# Chapter 3: Context Engineering as a Discipline
 
-*TODO: Write content*
+In the previous two chapters, we established the problem (AI fails differently) and defined the terms (what context means). Now we answer the central question: how do we solve it?
 
-## Chapter Outline
+The answer is not better prompts, not more tokens, and not bigger models. The answer is a discipline: **Context Engineering**.
 
-- TODO: Add outline items
+## What Context Engineering Is Not
 
-## Key Points to Cover
+To understand what Context Engineering is, it is useful to first understand what it is not.
 
-1. TODO: Add key points
+### Not Prompt Engineering
 
-## Sources
+**Prompt engineering** focuses on optimizing the input prompt to get better outputs from the model. It is concerned with word choice, instruction order, examples, and formatting. It treats the prompt as a tuning knob.
 
-- TODO: Add sources
+This is necessary but insufficient. Prompt engineering treats context as a single input variable, when in fact context is a multi-dimensional system. Optimizing one prompt does not address the structural problems that cause context drift. You can have a perfect prompt and still have a failing system because the knowledge base is misaligned, the tools are inconsistent, or the commercial context conflicts with the domain context.
+
+### Not "Vibe Coding"
+
+At the other extreme is what some call **"vibe coding"** — the approach of iterating on AI systems by intuition, trusting that the model will "just figure it out." This is the approach of least resistance: try something, see what happens, adjust based on feel.
+
+This approach fails for the reasons established in Chapter 1. The failures are invisible and cumulative. What feels right today may produce subtle misalignment that compounds over weeks. Without explicit structure, there is no way to detect drift, no way to validate alignment, and no way to rollback to a known-good state.
+
+### Not Documentation
+
+Context Engineering is also not just documentation. Traditional software projects are full of documents — specifications, design documents, API docs, runbooks. These documents are important, but they are often disconnected from the running system.
+
+Context Engineering treats **artefacts as decision containers**, not documentation outputs. The distinction matters: a document is something you write and then reference. A decision container is something that moves through your workflows, gets processed by AI systems, and enforces constraints. The content changes, and those changes are tracked — just as logistics systems track containers and their contents.
+
+## The Historical Roots
+
+Context Engineering is not a new invention. It is the application of older principles to a new technological context.
+
+### Engineering Control (1960s)
+
+In the 1960s, as software-intensive systems grew in complexity, the systems engineering community developed **engineering control** practices. These included:
+
+- **Configuration management** — version control, change control, baseline management
+- **Requirements tracing** — linking requirements to design to implementation to test
+- **Decision gates** — formal checkpoints where progress is evaluated against criteria
+
+These practices emerged because the costs of failure in aerospace and defense systems were catastrophic. They imposed structure on what would otherwise be organic growth.
+
+Context Engineering applies these same principles to AI systems, adapting them for the unique characteristics of probabilistic, generative technology.
+
+### Domain-Driven Design (2000s)
+
+In the early 2000s, Eric Evans wrote **Domain-Driven Design**, introducing concepts like the **ubiquitous language** (a shared vocabulary between developers and domain experts), **bounded contexts** (explicit boundaries around domain models), and **aggregates** (clusters of related entities with consistent boundaries).
+
+These concepts map directly to Context Engineering:
+
+- The **ubiquitous language** becomes the controlled vocabulary that the knowledge graph enforces
+- The **bounded context** becomes the context boundary we manage
+- The **aggregate** becomes the entity cluster with its invariants
+
+DDD was a response to the complexity of enterprise software. Context Engineering is the same response, adapted for AI.
+
+### Configuration Management
+
+The oldest root is **configuration management** — the practice of controlling changes to system configuration. In traditional software, configuration includes code, build scripts, environment variables, and deployment specs.
+
+In AI, configuration expands to include prompts, knowledge bases, model parameters, retrieval configurations, and validation rules. Context Engineering applies configuration management principles to this expanded scope.
+
+## The Zestic AI Framework
+
+The most complete articulation of Context Engineering comes from Turkhanov's Zestic AI framework. It provides a structured approach with several key components:
+
+### The Reconciled Domain Model
+
+At the center of the framework is a **reconciled domain model** — a single, authoritative definition of the entities, relationships, rules, and constraints that define the problem space.
+
+This is not a diagram for architects. It is the **semantic backbone** that every artefact traces back to. Business scenarios, process models, data schemas, APIs, AI use cases, and UX flows must all be consistent with the domain model.
+
+The reconciliation process ensures that the domain model is stable, explicit, and shared. Without reconciliation, different parts of the organization develop different understandings. With reconciliation, there is a single source of truth.
+
+### Artefacts as Decision Containers
+
+In the Zestic framework, **artefacts are not documentation** — they are **decision containers**. An artefact contains decisions: what was decided, why, what alternatives were considered, what the implications are.
+
+This is a subtle but important shift. Traditional documentation says "what is." Decision containers say "what was decided and why." This enables:
+
+- **Impact analysis** — when something changes, you can trace which decisions are affected
+- **Rollback capability** — when a decision proves wrong, you can revert to the previous decision
+- **Audit trail** — regulators or reviewers can see the reasoning behind any choice
+
+### Gated Lifecycle with Reconciliation
+
+Enterprise AI programs should not operate as continuous, uncontrolled evolution. They require **gated stages** — formal checkpoints where progress is evaluated against criteria.
+
+At each gate, the complex functions of reconciliation occur:
+
+- The domain model is validated for consistency
+- Artefacts are checked for coherence
+- Risk is assessed
+- A freeze is configured (allowing changes only through formal change requests)
+
+This does not mean requirements cannot change. They will. Architecture can change. Even the domain model can change. But the stage makes those changes visible, tracked, and aligned. Progression is conditional, not automatic.
+
+### Separation of Account Management and Engineering
+
+A key insight from the Zestic framework is the danger of **conflating account management (commercial) with engineering (technical)**. When the same channel handles client expectations and technical feasibility, decision integrity collapses:
+
+- Commercial urgency overrides engineering baselines
+- Technical rigor is relaxed to meet commitments
+- Scope creep occurs from informal commitments
+
+These functions must interact — but not merge into one chat. Engineering must have the authority to reject scope that violates architectural integrity. When this boundary is respected, context remains bounded.
+
+## The Cost of Ignoring Context Engineering
+
+The cost of ignoring Context Engineering is **structural debt** — not technical debt (which affects code), but semantic debt (which affects meaning).
+
+Structural debt accumulates invisibly:
+
+- Stakeholders reinterpret goals downstream (semantic drift)
+- Domain definitions drift between workshops (vocabulary drift)
+- Artefacts exist but contradict each other (coherence drift)
+- Prompts evolve without version control (configuration drift)
+
+By the time issues surface in integration or testing, correction costs have multiplied. The later a context problem is discovered, the exponentially more expensive it is to fix.
+
+This is compounded by AI's probabilistic nature. Traditional software has deterministic bugs that can be tested. AI systems have probabilistic misalignments that are much harder to detect. The combination of structural debt and AI behavior creates a particularly vicious cycle.
+
+## Summary: A Necessary Discipline
+
+Context Engineering is the discipline of managing the multi-dimensional context that AI systems operate on. It draws from:
+
+- **Engineering control** (1960s) — configuration management, decision gates, baselines
+- **Domain-driven design** (2000s) — ubiquitous language, bounded contexts
+- **Zestic AI framework** (2025) — reconciled domain model, artefact governance, gated lifecycle
+
+It is distinct from:
+
+- **Prompt engineering** — which treats context as a single tuning knob
+- **Vibe coding** — which relies on intuition without structure
+- **Documentation** — which records what is without tracking decisions
+
+The cost of ignoring it is structural debt that compounds over time. This makes Context Engineering not optional but existential for enterprise AI projects.
+
+## Key Sources
+
+- Turkhanov, "Context Engineering: The Missing Discipline" (Zestic AI, 2025)
+- Eric Evans, "Domain-Driven Design" (2003)
+- Systems engineering literature on configuration management (1960s)
