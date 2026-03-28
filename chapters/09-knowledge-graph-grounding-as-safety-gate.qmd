@@ -1,0 +1,283 @@
+# Chapter 9: Knowledge Graph Grounding as Safety Gate
+
+In the previous chapters, we established that knowledge graphs provide precise, explainable context for AI systems. Now we address the most important application: **using knowledge graphs as safety gates** to prevent dangerous hallucinations.
+
+The MedGemma competition case study demonstrates this powerfully: a knowledge graph grounding system that catches the 800mg → 80mg error, preventing a 10x overdose that could kill patients.
+
+## The MedGemma Competition Case Study
+
+In 2025, a competition was held to improve medical AI safety. The challenge: given a patient's condition, recommend an appropriate drug and dosage.
+
+### The Problem: Raw LLMs Are Dangerous
+
+The raw MedGemma model (and other medical LLMs) exhibited dangerous behaviors:
+
+- **Dosage errors**: Recommended Osimertinib **800mg** instead of 80mg — a 10x overdose that could kill
+- **Vague recommendations**: Suggested "BRAF inhibitor" instead of the specific, approved drug
+- **Wrong substitutions**: Recommended drugs that contraindicated the patient's other conditions
+- **No evidence trail**: Could not cite clinical trials or guidelines
+
+This is not a theoretical concern. In real healthcare settings, an AI system that recommends a 10x overdose can kill patients. The stakes could not be higher.
+
+### The Solution: Six-Stage Pipeline
+
+Terraphim's MedGemma solution implements a six-stage pipeline that uses knowledge graph grounding to constrain and validate model outputs:
+
+1. **Entity Extraction** (Aho-Corasick, <1ms, 1.4M SNOMED patterns)
+2. **Knowledge Graph Query** (SNOMED CT + PrimeKG, <1ms)
+3. **PGx Validation** (CPIC guidelines, <1ms)
+4. **MedGemma Inference** (KG-augmented prompt)
+5. **Safety Validation** (KG grounding gate)
+6. **Grounded Clinical Recommendation**
+
+### The Results: 543 Tests, 18/18 Grounded
+
+The system achieved remarkable results:
+
+- **543+ tests passing** — comprehensive validation of correctness
+- **18/18 evaluation cases grounded** — every output validated against the knowledge graph
+- **800mg → 80mg correction** — the critical 10x error was caught and corrected
+- **Specific drug-dose recommendations** — not vague class-level suggestions
+
+This is what knowledge graph grounding looks like in practice: a system that catches dangerous errors before they reach patients.
+
+## How KG Grounding Prevents Hallucination at Scale
+
+The MedGemma system demonstrates the core pattern: **LLM generates → KG validates → grounded output**.
+
+### The Pattern in Detail
+
+```
+1. LLM generates output (untrusted)
+   ↓
+2. Extract entities from output (drug names, dosages, conditions)
+   ↓
+3. Query knowledge graph (are these entities and relationships valid?)
+   ↓
+4. If valid: pass through to user
+   ↓
+5. If invalid: reject, flag for review, or correct
+```
+
+This is a **safety gate** — the knowledge graph validates everything that leaves the system.
+
+### Why This Works
+
+The gate pattern works because:
+
+1. **Knowledge graph is deterministic**: As Chapter 6 showed, explicit relationships don't hallucinate
+2. **LLM is constrained**: Even if the LLM generates something wrong, the gate catches it
+3. **Traceable**: Every decision can be audited ("drug X was rejected because...")
+4. **Fail-safe**: The default is to reject uncertain outputs, not pass them through
+
+### Scale Considerations
+
+The MedGemma system processes:
+
+- **1.4M SNOMED patterns** in <1ms (Aho-Corasick)
+- **Entity extraction** from clinical notes in <1ms
+- **Graph validation** in <1ms
+- **Total overhead** beyond LLM inference: ~3ms
+
+This overhead is negligible compared to LLM inference time (seconds to minutes). The safety gate adds practically no latency.
+
+## The Gate Pattern: LLM Generates → KG Validates → Grounded Output
+
+The gate pattern can be implemented in different ways:
+
+### Gate Mode 1: Reject Invalid
+
+If the LLM output conflicts with the knowledge graph, reject it:
+
+```
+LLM: "Prescribe Aspirin 5000mg"
+KG Check: "Aspirin max_daily_dose = 4000mg"
+Result: REJECTED - exceeds maximum dosage
+```
+
+### Gate Mode 2: Correct Output
+
+If the LLM output is partially wrong, correct it:
+
+```
+LLM: "Prescribe Osimertinib 800mg"
+KG Check: "FLAURA trial shows 80mg efficacy"
+Result: CORRECTED to "Prescribe Osimertinib 80mg"
+```
+
+### Gate Mode 3: Annotate and Warn
+
+If the output is valid but has caveats, annotate:
+
+```
+LLM: "Prescribe Warfarin 5mg"
+KG Check: "Warfarin contraindicated_with: Bleeding risk (patient has this condition)"
+Result: ANNOTATED with "WARNING: Contraindication - adjust dose or choose alternative"
+```
+
+### Gate Mode 4: Escalate
+
+If the output is uncertain or dangerous, escalate to human:
+
+```
+LLM: "Prescribe experimental drug X"
+KG Check: "Drug X not in approved_drugs list"
+Result: ESCALATED to physician for review
+```
+
+## Explainable to Regulators: Deterministic Matching Traces
+
+For healthcare, finance, and other regulated industries, **explainability** is not optional — it's a legal requirement.
+
+### The Regulatory Challenge
+
+Regulators (FDA, EMA, FCA) ask:
+
+- Why did the system recommend X?
+- What evidence supports this recommendation?
+- Can you trace the decision path?
+
+For vector embedding systems, this is impossible. The best they can say is "the similarity score was 0.87."
+
+### The Terraphim Answer
+
+For every grounded output, Terraphim provides a complete trace:
+
+```
+RECOMMENDATION: Osimertinib 80mg daily
+
+EVIDENCE TRACE:
+1. Entity "Osimertinib" extracted from output
+2. Query SNOMED CT: drug -> dosage -> evidence
+3. Found: FLAURA trial (2019) shows 80mg efficacy
+4. Found: FDA label lists 80mg as approved dose
+5. No contraindications found for patient profile
+
+GROUNDING SCORE: 0.95 (high confidence)
+
+VALIDATION: PASSED - grounded in clinical evidence
+```
+
+This is not a magic number — it's a complete audit trail that satisfies regulators.
+
+### Real-World Validation
+
+In the MedGemma competition:
+
+- Every output was traced to clinical evidence
+- 18/18 evaluation cases showed improvement with grounding
+- The 800mg → 80mg correction was fully traceable
+- All 543 tests passed with deterministic validation
+
+## Building the Validation Pipeline
+
+Implementing a validation pipeline involves several components:
+
+### Component 1: Entity Extraction
+
+Extract entities from LLM output:
+
+```python
+def extract_entities(text):
+    # Use Aho-Corasick to find known entities
+    matches = automaton.scan(text)
+    entities = [match.entity for match in matches]
+    return entities
+```
+
+### Component 2: Knowledge Graph Query
+
+For each entity, query the graph:
+
+```python
+def validate_entities(entities, knowledge_graph):
+    validations = []
+    for entity in entities:
+        # Does the entity exist in the graph?
+        node = knowledge_graph.get(entity)
+        if not node:
+            validations.append(ValidationResult(entity, "NOT_FOUND"))
+            continue
+        
+        # Is the claimed relationship valid?
+        relationships = knowledge_graph.get_relationships(entity)
+        validations.append(ValidationResult(entity, "VALID", relationships))
+    
+    return validations
+```
+
+### Component 3: Decision Logic
+
+Apply rules to validation results:
+
+```python
+def make_decision(validations, config):
+    # If any entity is invalid, reject
+    if any(v.status == "NOT_FOUND" for v in validations):
+        return Decision("REJECT", "Unknown entity detected")
+    
+    # If dosage exceeds max, correct
+    if any(v.status == "EXCEEDS_MAX" for v in validations):
+        return Decision("CORRECT", "Adjusted to maximum safe dose")
+    
+    # Otherwise, pass through
+    return Decision("PASS", "Validation successful")
+```
+
+### Component 4: Audit Trail
+
+Log everything for auditing:
+
+```python
+def log_decision(decision, validations, timestamp):
+    audit_log.append({
+        "timestamp": timestamp,
+        "input": llm_output,
+        "validations": validations,
+        "decision": decision,
+        "trace": generate_trace(validations)
+    })
+```
+
+## The Broader Pattern: Safety Gates Beyond Healthcare
+
+The MedGemma pattern applies beyond healthcare:
+
+### Finance
+
+- LLM generates investment recommendation → KG validates against approved products list
+- Catches recommendations for unauthorized instruments
+
+### Legal
+
+- LLM generates legal advice → KG validates against jurisdiction-specific statutes
+- Catches advice that applies to wrong jurisdiction
+
+### Manufacturing
+
+- LLM generates process parameters → KG validates against safety limits
+- Catches parameters that exceed equipment capabilities
+
+### Any High-Stakes Domain
+
+The pattern is universal: **never trust the LLM unconditionally**. Run its outputs through a knowledge graph validation gate.
+
+## Summary: Grounding as the Safety Layer
+
+Knowledge graph grounding provides the safety layer that AI systems need:
+
+1. **Prevents dangerous outputs**: Catches the 800mg → 80mg error
+2. **Provides explainability**: Every decision can be traced for regulators
+3. **Adds minimal latency**: <3ms overhead with Aho-Corasick
+4. **Scales to production**: 543 tests, 18/18 evaluation cases
+5. **Applies broadly**: Healthcare, finance, legal, manufacturing
+
+The MedGemma competition demonstrates this pattern at scale. It's not theoretical — it's production-ready.
+
+## Key Sources
+
+- MedGemma competition submission and results (543 tests, 18/18 grounded)
+- Terraphim clinical pipeline implementation
+- SNOMED CT and PrimeKG knowledge graphs
+- CPIC pharmacogenomics guidelines
+- FDA guidance on AI/ML in medical devices
