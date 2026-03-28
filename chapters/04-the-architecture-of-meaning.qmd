@@ -1,15 +1,222 @@
-# Chapter 4: Deterministic Search vs Vector Embeddings
+# Chapter 4: The Architecture of Meaning
 
-*TODO: Write content*
+In the previous chapter, we established Context Engineering as a discipline. Now we need to understand how to implement it: the architecture of meaning that makes context manageable.
 
-## Chapter Outline
+The core insight from the Zestic AI framework is that **meaning must be architected**, not just hoped for. Without explicit structure, context drifts into entropy. With explicit structure, context becomes manageable at scale.
 
-- TODO: Add outline items
+## Artefacts as Decision Containers
 
-## Key Points to Cover
+One of the most important shifts in thinking that Context Engineering requires is the treatment of **artefacts as decision containers**, not documentation outputs.
 
-1. TODO: Add key points
+In traditional software projects, we produce documentation: requirements documents, design documents, API specifications, runbooks. These documents describe what is. They are written once and referenced occasionally.
 
-## Sources
+In Context Engineering, artefacts are different. An **artefact is a container for a decision** — what was decided, why, what alternatives were considered, and what the implications are. This shifts the purpose from recording to **enforcing**.
 
-- TODO: Add sources
+The analogy is logistics: a shipping container doesn't just hold cargo — it moves through workflows, gets tracked, is processed by systems. Its contents change, and those changes are logged. Similarly, an artefact moves through the project lifecycle, gets processed by AI systems, and enforces constraints.
+
+Consider an API specification. As a traditional document, it says "the API accepts these parameters." As a decision container, it says:
+
+- "We decided to expose these parameters (not others) because..."
+- "We considered alternative designs and rejected them because..."
+- "Any change to this specification requires impact analysis"
+
+This enables **impact analysis**: when something changes, you can trace which decisions are affected. It enables **rollback**: when a decision proves wrong, you can revert to the previous decision. It enables **audit**: regulators or reviewers can see the reasoning behind any choice.
+
+### Implementing Decision Containers
+
+In practice, decision containers can be implemented as structured files with explicit metadata:
+
+```yaml
+# artefact: order-api-spec.yaml
+decision:
+  id: D-2025-042
+  date: 2025-03-15
+  title: Order API accepts composite IDs
+  alternatives_considered:
+    - separate_order_id_and_product_id: rejected due to client complexity
+    - uuid_only: rejected due to legacy system compatibility
+  implications:
+    - requires composite ID parser
+    - affects order service and fulfillment service
+  traced_to: domain-model.yaml#entities.order
+```
+
+This structured approach is what enables the "configuration manager AI agent" concept from the Zestic framework — an AI that can process, validate, and reason over artefacts because they contain machine-readable decisions.
+
+## The Reconciled Domain Model as Anchor
+
+At the center of the architecture is the **reconciled domain model** — a single, authoritative definition of the entities, relationships, rules, and constraints that define the problem space.
+
+This is not a diagram for architects to show to stakeholders. It is the **semantic backbone** that every artefact traces back to. In the Zestic framework:
+
+> "At the minimum, every major artefact must trace back to it (i.e., be part of the configuration baseline): business scenarios, process models, data schemas, APIs, AI use cases, and UX flows. This ensures semantic coherence across each stage of the software development life cycle."
+
+### What a Domain Model Contains
+
+A practical domain model for an AI system includes:
+
+- **Entities**: The key objects in the domain (Customer, Order, Product, Drug, Dosage)
+- **Relationships**: How entities relate (Customer places Order, Order contains Products)
+- **Business rules**: Inviolable constraints (Dosage must be positive, Contraindication applies when...)
+- **State transitions**: How entities change over time (Order placed → Order shipped → Order delivered)
+- **Events**: Significant occurrences (OrderPlaced, PaymentReceived, ShipmentDelivered)
+
+### Reconciliation Process
+
+The domain model must be **reconciled** — meaning it is explicitly validated for consistency across all stakeholders and artefacts. This is not a one-time exercise but a continuous process:
+
+1. **Stakeholder alignment**: All parties agree on the definitions
+2. **Artefact validation**: Every artefact is checked for consistency with the model
+3. **Coherence checking**: The model itself is checked for internal consistency
+4. **Baseline locking**: At each stage gate, the model is frozen and versioned
+
+Without reconciliation, different parts of the organization develop different understandings. One team uses "product" to mean the item purchased; another uses it to mean the service subscription. These seemingly small misalignments compound into system-level failures.
+
+## Baselining and Version Control for Semantic Alignment
+
+The concept of **baselining** comes from traditional configuration management. A baseline is a formally approved version of something that serves as a reference for subsequent work.
+
+In Context Engineering, baselining applies to:
+
+- The domain model (what entities and rules are approved)
+- The vocabulary (what terms mean)
+- The prompts (what instructions are approved)
+- The knowledge base (what facts are approved)
+- The configuration (what settings are approved)
+
+> "A baseline should lock terminology, scope, assumptions, and define what is out of scope. Configuration management ensures version control, traceability of changes, and controlled evolution of artefacts. Without baselining, artefacts become informal references. With baselining, they become governance instruments."
+
+### Semantic Versioning for Context
+
+Just as software uses semantic versioning (major.minor.patch), context should use **semantic versioning for meaning**:
+
+- **Major**: Breaking change to domain model (entity removed, relationship changed)
+- **Minor**: Addition to domain model (new entity, new relationship)
+- **Patch**: Non-breaking change (documentation, examples)
+
+This enables **impact analysis**: a major version bump signals that all dependent artefacts may need review. A patch bump signals that the change is safe.
+
+## Separating Commercial Context from Technical Context
+
+A critical architectural decision is the **separation of commercial context from technical context**. These are different types of knowledge that serve different purposes and must be managed differently.
+
+### Commercial Context
+
+Commercial context includes:
+
+- Business objectives and priorities
+- Customer commitments and expectations
+- Budget and timeline constraints
+- Go-to-market requirements
+- Competitive pressures
+
+This context lives in sales conversations, contract terms, slide decks, and executive priorities. It changes based on market conditions and customer relationships.
+
+### Technical Context
+
+Technical context includes:
+
+- System capabilities and limitations
+- Available tools and integrations
+- Data schemas and API contracts
+- Model configurations and parameters
+- Validation rules and constraints
+
+This context lives in code, specifications, and configuration files. It changes based on engineering decisions.
+
+### Why Separation Matters
+
+When commercial and technical context are mixed:
+
+- Account managers commit to features without feasibility validation
+- Engineers are asked to "make it work" regardless of architecture
+- Scope creep happens through informal commitments
+- Technical debt accumulates invisibly
+
+When they are separated:
+
+- Engineers can focus on technical feasibility
+- Commercial stakeholders have clear escalation paths
+- Change requests require formal impact analysis
+- Technical integrity is maintained
+
+The OpenClaw system demonstrates this separation: the commercial context (user preferences, priorities) is stored separately from the technical context (skills, tools, configurations).
+
+## Why Each Lifecycle Stage Requires a Different Inference Context
+
+A key insight from the Zestic framework is that **each lifecycle stage requires a different inference context** — a different subset of the full context, optimized for the decisions at that stage.
+
+### The Four Stages
+
+1. **Discovery** — Context includes market research, customer interviews, competitor analysis, initial domain model. Decisions are about what to build.
+
+2. **Design** — Context includes refined domain model, architecture decisions, technical constraints, API contracts. Decisions are about how to build.
+
+3. **Development** — Context includes implementation details, code, tests, integrations. Decisions are about whether the build is correct.
+
+4. **Deployment** — Context includes configuration, monitoring, rollback procedures. Decisions are about whether the system is running correctly.
+
+### Why Context Must Change
+
+During discovery, you do not need implementation details. During development, you do not need market research. Each stage has a **decision space** — the set of decisions relevant to that stage.
+
+By bounding context to the decision space:
+
+- **Cognitive load is reduced** — the model sees only what's relevant
+- **Drift is prevented** — old decisions from previous stages don't pollute current context
+- **Stage gates are meaningful** — each gate validates the context for the new stage
+
+This is why the "configuration manager AI agent" concept is powerful: it manages context transitions, ensuring that context is appropriate for each stage.
+
+## Concept Modelling Fundamentals
+
+As we close this chapter, we return to the concept modelling that was introduced in Chapter 1. Now we can make it more precise.
+
+### Entity Types
+
+In the domain model, entities are typed:
+
+- **Core entities**: The main business objects (Customer, Order, Product)
+- **Value objects**: Immutable objects defined by their attributes (Money, Address)
+- **Events**: Something significant that happened (OrderPlaced, PaymentReceived)
+- **Aggregates**: Clusters of related entities with consistent boundaries
+
+### Relationship Cardinalities
+
+Relationships between entities have cardinalities:
+
+- **One-to-one**: Customer has one Profile
+- **One-to-many**: Customer places many Orders
+- **Many-to-many**: Product appears in many Orders
+
+These cardinalities matter for AI context because they define what can be assumed. If the AI assumes one-to-many when it's actually many-to-many, it will generate incorrect outputs.
+
+### Invariants
+
+**Invariants** are rules that must always be true:
+
+- "Order total must equal sum of line items"
+- "Dosage must be positive"
+- "Customer must have verified email"
+
+These are the safety gates. Without explicit invariants, the AI can violate constraints that humans assume are obvious.
+
+## Summary: Architecture Enables Discipline
+
+The architecture of meaning provides the structure that makes Context Engineering practical:
+
+1. **Artefacts as decision containers** — enforce traceability and enable impact analysis
+2. **Reconciled domain model** — provides the semantic anchor
+3. **Baselining** — locks context at each stage for governance
+4. **Separation of commercial and technical context** — maintains integrity
+5. **Stage-specific inference context** — reduces drift and cognitive load
+6. **Concept modelling fundamentals** — entities, relationships, invariants
+
+Without this architecture, Context Engineering is just another buzzword. With it, context becomes manageable.
+
+## Key Sources
+
+- Turkhanov, "Context Engineering: The Missing Discipline" (Zestic AI, 2025)
+- Eric Evans, "Domain-Driven Design" (2003) — entities, aggregates, bounded contexts
+- Systems engineering configuration management literature
+- OpenClaw context architecture (practical implementation)
