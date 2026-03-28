@@ -1,0 +1,131 @@
+# Chapter 19: Hybrid Pipeline Patterns
+
+This chapter shows how to **combine** deterministic and probabilistic approaches — getting the best of both worlds.
+
+## The Hybrid Architecture
+
+A hybrid pipeline routes queries based on their characteristics:
+
+```javascript
+async function hybridPipeline(query) {
+  // Step 1: Classify the query
+  const classification = classifyQuery(query);
+  
+  if (classification.type === "known_entity") {
+    // Use deterministic: exact match, fast, precise
+    return await deterministicSearch(query);
+    
+  } else if (classification.type === "open_ended") {
+    // Use semantic: broader search, handles novel cases
+    return await semanticSearch(query);
+    
+  } else if (classification.type === "fact_check") {
+    // Use knowledge graph grounding
+    return await kgGround(semanticSearch(query));
+  }
+}
+```
+
+### Query Classification
+
+```javascript
+function classifyQuery(query) {
+  // Check if query matches known vocabulary
+  const vocabMatch = matchVocabulary(query);
+  
+  if (vocabMatch.exact) {
+    return { type: "known_entity", confidence: 0.95 };
+  }
+  
+  // Check if it's a factual question
+  if (query.match(/^(what is|who is|when did|where is)/i)) {
+    return { type: "fact_check", confidence: 0.8 };
+  }
+  
+  // Default: open-ended
+  return { type: "open_ended", confidence: 0.5 };
+}
+```
+
+## Routing Logic
+
+```javascript
+class QueryRouter {
+  constructor(config) {
+    this.deterministic = config.deterministic;
+    this.semantic = config.semantic;
+    this.grounding = config.grounding;
+  }
+  
+  async route(query) {
+    const classification = classifyQuery(query);
+    
+    switch (classification.type) {
+      case "known_entity":
+        return this.routeDeterministic(query);
+        
+      case "fact_check":
+        return this.routeGrounded(query);
+        
+      default:
+        return this.routeSemantic(query);
+    }
+  }
+  
+  async routeDeterministic(query) {
+    const results = await this.deterministic.search(query);
+    return { 
+      results, 
+      method: "deterministic",
+      latency: results.latency 
+    };
+  }
+  
+  async routeGrounded(query) {
+    // Semantic search, then ground in KG
+    const semantic = await this.semantic.search(query);
+    const grounded = await this.grounding.validate(semantic);
+    return { 
+      results: grounded, 
+      method: "grounded",
+      latency: semantic.latency + grounded.latency
+    };
+  }
+}
+```
+
+## Cost Optimization
+
+Hybrid pipelines optimize **cost** by using expensive methods only when needed:
+
+```javascript
+const costStructure = {
+  deterministic: { perQuery: 0, coldStart: 0 },
+  semantic: { perQuery: 0.01, coldStart: 2 },
+  grounding: { perQuery: 0.001, coldStart: 0 }
+};
+
+// Route based on value, not just capability
+function optimizeCost(queries) {
+  const optimized = queries.map(q => {
+    if (q.knownEntity) {
+      return { ...q, method: "deterministic" };
+    }
+    if (q.requiresAccuracy) {
+      return { ...q, method: "grounded" };
+    }
+    return { ...q, method: "semantic" };
+  });
+  
+  return optimized;
+}
+```
+
+## Summary
+
+Hybrid pipelines combine:
+- Deterministic for known entities (fast, precise)
+- Semantic for open-ended (flexible)
+- Grounding for accuracy-critical (safe)
+
+Key Sources: Terraphim hybrid architecture, RAG optimization

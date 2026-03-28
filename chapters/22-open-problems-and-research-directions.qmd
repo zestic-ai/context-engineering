@@ -1,0 +1,86 @@
+# Chapter 22: Open Problems and Research Directions
+
+This final chapter identifies **open problems** — the unsolved challenges that researchers and practitioners should address.
+
+## Open Problems
+
+### Problem 1: Cross-Context Coherence
+
+**Challenge:** Maintaining semantic alignment across sessions and agents.
+
+```javascript
+// Sessions have different contexts
+sessionA.context = { ... };
+sessionB.context = { ... };
+
+// How do we ensure coherence?
+// Current approaches: none fully work
+```
+
+### Problem 2: Real-Time Context Updates
+
+**Challenge:** Hot-reloading knowledge graphs without breaking coherence.
+
+```javascript
+// Want: update KG, immediately usable
+await kg.update(entity, newFacts);
+// But: existing context may be invalidated
+```
+
+### Problem 3: Privacy in Context
+
+**Challenge:** Using personal context without exposing it.
+
+```javascript
+// Want: personalized context
+// But: privacy, security concerns
+// Solution: not solved
+```
+
+## Research Directions
+
+### Direction 1: Context Benchmarking
+
+We need **standard benchmarks** for context quality:
+
+```python
+benchmarks = {
+  "retrieval_accuracy": "percentage of relevant results",
+  "grounding_rate": "percentage of claims verified",
+  "drift_detection": "time to detect drift",
+  "latency": "time to retrieve context"
+}
+```
+
+### Direction 2: Automated Vocabulary Building
+
+Manually building vocabularies doesn't scale:
+
+```python
+# Research: automatically extract vocabulary from corpus
+# Using: LLM extraction + human validation
+```
+
+### Direction 3: Context Composability
+
+Combining contexts from multiple sources:
+
+```python
+# Want: compose user context + project context + domain context
+# Current: ad-hoc merging
+# Needed: formal composition algebra
+```
+
+## Summary
+
+The field is young. Key problems:
+- Cross-context coherence
+- Real-time updates
+- Privacy in context
+- Benchmarking
+- Automation
+- Composability
+
+This book provides a foundation. The rest is for you to build.
+
+Key Sources: Research literature, open problems in AI

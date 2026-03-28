@@ -1,0 +1,158 @@
+# Chapter 17: The OpenClaw Context System
+
+In previous chapters, we explored validation, multi-agent systems, and hooks. Now we examine a **real-world implementation** — the OpenClaw context system, which demonstrates how all these patterns work together.
+
+OpenClaw is an AI assistant system that manages context across sessions, skills, and autonomous operations. It embodies the principles from this book.
+
+## Architecture Overview
+
+OpenClaw's context architecture consists of several layers:
+
+```
+workspace/
+├── AGENTS.md          # Identity and operating principles
+├── SOUL.md           # Core persona
+├── USER.md            # User preferences and context
+├── HEARTBEAT.md       # Autonomous loop instructions
+├── memory/            # Session and long-term memory
+├── skills/            # Modular skill definitions
+├── kg/                # Knowledge graph
+└── primitives/        # Task orchestration
+```
+
+## Memory Architecture
+
+OpenClaw uses a layered memory system:
+
+```javascript
+const memory = {
+  // Constitutional - never compressed
+  constitutional: ["AGENTS.md", "SOUL.md", "USER.md"],
+  
+  // Session - current conversation
+  session: [],  // Last N turns
+  
+  // Long-term - persistent across sessions
+  longTerm: {}, // key-value store
+  
+  // Short-term - ephemeral, current task
+  shortTerm: {} // cleared each session
+};
+```
+
+### Memory Loading Rules
+
+```javascript
+// What loads when
+const loadRules = {
+  // Always loaded
+  always: ["AGENTS.md", "SOUL.md", "USER.md"],
+  
+  // Loaded on startup
+  startup: ["HEARTBEAT.md", "skill-catalog"],
+  
+  // Loaded on demand
+  onDemand: ["skills/*/SKILL.md", "memory/**"],
+  
+  // Never loaded in shared sessions
+  never: ["MEMORY.md"]  // Security: personal context
+};
+```
+
+## Skill System
+
+Skills in OpenClaw follow the architecture from Chapter 12:
+
+```yaml
+skills:
+  - name: github
+    triggers: ["gh", "github", "pr", "issue"]
+    tier: core
+    
+  - name: gog
+    triggers: ["gmail", "calendar", "email"]
+    tier: core
+    
+  - name: weather
+    triggers: ["weather", "forecast", "temperature"]
+    tier: optional
+```
+
+### Skill Activation
+
+```javascript
+async function activateSkills(query) {
+  const triggered = skills.filter(s => 
+    s.triggers.some(t => query.includes(t))
+  );
+  
+  // Max 5 active
+  return triggered.slice(0, 5);
+}
+```
+
+## HEARTBEAT.md: Autonomous Loops
+
+HEARTBEAT.md defines autonomous behavior:
+
+```markdown
+# Autonomous Agent Loop
+
+On heartbeat (every 30 minutes):
+1. Scan primitives/tasks for open items
+2. Pick highest priority task
+3. Execute if not blocked
+4. Log progress
+5. If blocked, ask human a crisp question
+```
+
+### Heartbeat Implementation
+
+```javascript
+async function heartbeat() {
+  const tasks = await scanTasks();
+  const actionable = tasks.filter(t => !t.blocked);
+  
+  if (actionable.length > 0) {
+    const task = prioritize(actionable)[0];
+    await execute(task);
+  } else if (tasks.some(t => t.blocked)) {
+    // Ask human the unblocking question
+    await notifyHuman(getBlockerQuestion(tasks));
+  }
+}
+```
+
+## Context Security
+
+OpenClaw separates **shared** vs **personal** context:
+
+```javascript
+// Shared session - safe for group chats
+const sharedContext = {
+  workspace: true,
+  skills: true,
+  memory: false,  // Never
+  personal: false
+};
+
+// Personal session - full access
+const personalContext = {
+  workspace: true,
+  skills: true,
+  memory: true,
+  personal: true
+};
+```
+
+This prevents private context from leaking to shared sessions.
+
+## Summary
+
+OpenClaw demonstrates:
+- Layered memory architecture
+- Skill-based context modularity
+- Autonomous heartbeat loops
+- Security separation for shared vs personal
+
+Key Sources: OpenClaw documentation

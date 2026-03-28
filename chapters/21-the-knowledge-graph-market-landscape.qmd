@@ -1,0 +1,71 @@
+# Chapter 21: The Knowledge Graph Market Landscape
+
+This chapter surveys the current **market for knowledge graph solutions** — what's available, where the market is going.
+
+## Major Players
+
+| Vendor | Approach | Strengths |
+|--------|----------|-----------|
+| **Microsoft GraphRAG** | LLM extraction to graph | Integration with Azure |
+| **Neo4j** | Property graph | Mature, widely used |
+| **Amazon Neptune** | Graph DB | AWS integration |
+| **Terraphim** | Deterministic + KG | Accuracy, speed |
+| **Google** | Knowledge Graph | Scale, search integration |
+
+### GraphRAG Approach
+
+Microsoft's GraphRAG extracts entities and relationships using LLMs:
+
+```python
+# GraphRAG workflow
+1. Extract entities from documents (LLM)
+2. Build relationship graph
+3. Index for retrieval
+4. Query with graph context
+```
+
+**Pros:** Handles large corpora, semantic extraction
+**Cons:** LLM-dependent, less precise
+
+### Terraphim Approach
+
+Terraphim uses deterministic matching:
+
+```python
+# Terraphim workflow
+1. Define vocabulary (manual)
+2. Build automata
+3. Match patterns exactly
+4. Validate against KG
+```
+
+**Pros:** Precise, fast, explainable
+**Cons:** Requires vocabulary definition
+
+## Market Trends
+
+### Trend 1: RAG Fatigue
+
+ enterprises are tired of pure vector RAG problems:
+
+- No grounding in facts
+- "Similar" doesn't mean "relevant"
+- Can't explain why results returned
+
+### Trend 2: Regulation Driving Structure
+
+EU AI Act, FDA, and financial regulations require **explainability** — driving demand for knowledge graphs.
+
+### Trend 3: Hybrid Solutions
+
+Market moving toward hybrid: deterministic for precision, semantic for breadth.
+
+## Summary
+
+The knowledge graph market is growing:
+- GraphRAG leads in enterprise
+- Terraphim leads in precision/speed
+- Hybrid is the emerging standard
+- Regulation is driving adoption
+
+Key Sources: Market analysis, vendor documentation

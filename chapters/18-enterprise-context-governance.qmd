@@ -1,0 +1,117 @@
+# Chapter 18: Enterprise Context Governance
+
+This chapter addresses how to apply context engineering at **enterprise scale** — with multiple teams, projects, and stakeholders.
+
+## Gated Lifecycle
+
+Enterprise AI projects require formal **gates** — checkpoints where context is validated before progression:
+
+```yaml
+lifecycle:
+  stages:
+    - name: discovery
+      gates:
+        - domain_model_baseline
+        - vocabulary_approved
+        
+    - name: design
+      gates:
+        - architecture_approved
+        - knowledge_graph_baseline
+        
+    - name: development
+      gates:
+        - code_quality_passed
+        - validation_tests_passed
+        
+    - name: deployment
+      gates:
+        - integration_passed
+        - security_review_passed
+```
+
+### Gate Validation
+
+```javascript
+async function validateGate(stage, gate) {
+  const requirements = getGateRequirements(stage, gate);
+  
+  const results = {
+    domainModel: validateDomainModel(),
+    vocabulary: validateVocabulary(),
+    artifacts: validateArtifacts(),
+    tests: validateTests()
+  };
+  
+  const passed = Object.values(results).every(r => r.passed);
+  
+  return { passed, results, recommendation: passed ? "APPROVED" : "NEEDS_WORK" };
+}
+```
+
+## Change Management
+
+Context changes must be **tracked** and **impact-analyzed**:
+
+```javascript
+class ContextChangeManager {
+  async requestChange(change) {
+    // 1. Analyze impact
+    const impact = await analyzeImpact(change);
+    
+    // 2. Get approvals
+    const approvals = await getApprovals(impact);
+    
+    // 3. Apply if approved
+    if (approvals.allPassed) {
+      await applyChange(change);
+      await logChange(change, approvals);
+    }
+    
+    return { approved: approvals.allPassed, impact, approvals };
+  }
+}
+```
+
+## Context Health Metrics
+
+Track context health across projects:
+
+```javascript
+const healthMetrics = {
+  // Structural health
+  vocabularyCoverage: "percentage of domain terms in KG",
+  artifactReconciliation: "percentage of artifacts aligned with domain model",
+  
+  // Operational health
+  contextDrift: "rate of context change per week",
+  retrievalAccuracy: "percentage of KG queries returning relevant results",
+  
+  // Governance health  
+  gatePassRate: "percentage of gates passed first time",
+  changeApprovalRate: "percentage of changes approved"
+};
+
+async function calculateHealth(project) {
+  const metrics = {};
+  
+  for (const [metric, definition] of Object.entries(healthMetrics)) {
+    metrics[metric] = await measure(project, definition);
+  }
+  
+  return {
+    overall: average(Object.values(metrics)),
+    metrics,
+    status: getStatus(metrics.overall)
+  };
+}
+```
+
+## Summary
+
+Enterprise governance requires:
+- Gated lifecycle with validation at each stage
+- Formal change management with impact analysis
+- Health metrics to track context quality
+
+Key Sources: Zestic AI framework, enterprise software governance

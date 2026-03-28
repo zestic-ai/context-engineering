@@ -1,0 +1,112 @@
+# Chapter 20: Building a Context Engineering Practice
+
+This chapter addresses how to **build a practice** — the people, processes, and culture to make context engineering work at scale.
+
+## Roles and Responsibilities
+
+A context engineering practice needs defined roles:
+
+```yaml
+roles:
+  - name: Context Engineer
+    responsibility: Building and maintaining knowledge graphs
+    skills: [ontology, graph databases, semantic modeling]
+    
+  - name: Prompt Engineer
+    responsibility: Designing and optimizing prompts
+    skills: [LLM mechanics, testing, iteration]
+    
+  - name: Validation Engineer
+    responsibility: Building validation gates
+    skills: [testing, monitoring, drift detection]
+    
+  - name: Governance Lead
+    responsibility: Ensuring context quality
+    skills: [process design, auditing, compliance]
+```
+
+### Role Interactions
+
+```javascript
+const roleInteractions = {
+  "Context Engineer": {
+    collaboratesWith: ["Prompt Engineer", "Validation Engineer"],
+    reportsTo: "Governance Lead",
+    owns: ["knowledge-graph", "vocabulary", "thesaurus"]
+  },
+  
+  "Prompt Engineer": {
+    collaboratesWith: ["Context Engineer", "Validation Engineer"],
+    reportsTo: "Engineering Lead",
+    owns: ["prompts", "skill-definitions"]
+  },
+  
+  // ...
+};
+```
+
+## Skill Development
+
+Train teams on context engineering:
+
+```javascript
+const trainingCurriculum = {
+  foundation: [
+    "Context Engineering fundamentals",
+    "Knowledge graph basics",
+    "Token budget management"
+  ],
+  
+  intermediate: [
+    "Building knowledge graphs",
+    "Validation gate design",
+    "Drift detection"
+  ],
+  
+  advanced: [
+    "Multi-agent orchestration",
+    "Enterprise governance",
+    "Custom tool development"
+  ]
+};
+```
+
+## Measuring Success
+
+Track practice effectiveness:
+
+```javascript
+const practiceMetrics = {
+  // Efficiency
+  contextRetrievalTime: "ms to retrieve relevant context",
+  tokenUsage: "average tokens per query",
+  
+  // Quality
+  validationPassRate: "percentage passing gates first time",
+  hallucinationRate: "grounded vs ungrounded outputs",
+  
+  // Velocity
+  featureDeliveryTime: "time from spec to deployed",
+  iterationCount: "prompt/skill improvement cycles"
+};
+
+async function reportPracticeHealth() {
+  const metrics = await measureMetrics(practiceMetrics);
+  const score = calculateScore(metrics);
+  
+  return {
+    score,
+    metrics,
+    recommendations: getRecommendations(score, metrics)
+  };
+}
+```
+
+## Summary
+
+Building a practice requires:
+- Defined roles with clear ownership
+- Training curriculum for skill development
+- Metrics to measure success
+
+Key Sources: Zestic AI framework, engineering practice building
