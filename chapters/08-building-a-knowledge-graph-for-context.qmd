@@ -1,0 +1,427 @@
+# Chapter 8: Building a Knowledge Graph for Context
+
+In the previous chapters, we established why knowledge graphs matter and how deterministic approaches work. Now we get practical: how do you build a knowledge graph for your specific context?
+
+This chapter provides a step-by-step guide, drawing from real implementations including the CTO Executive System knowledge graph.
+
+## Defining Nodes: Concepts, Documents, Terms, Entities
+
+A knowledge graph starts with **nodes** — the entities, concepts, and terms that your system operates on. But not all nodes are the same. You need to think carefully about what types of nodes to include.
+
+### Types of Nodes
+
+| Node Type | Description | Example |
+|-----------|-------------|---------|
+| **Entity** | Real-world objects | Drug, Patient, Order |
+| **Concept** | Abstract ideas | Compliance, Security, Quality |
+| **Term** | Vocabulary units | "myocardial infarction" |
+| **Document** | Content containers | Specification, Runbook, API doc |
+| **Event** | Things that happened | OrderPlaced, PaymentReceived |
+
+### What to Include: The Vocabulary-First Approach
+
+There are two approaches to building a knowledge graph:
+
+1. **Extraction-first**: Throw documents at the LLM, let it extract entities and relationships
+2. **Vocabulary-first**: Define your vocabulary explicitly, then map documents to it
+
+**Vocabulary-first is superior** for context engineering because:
+
+- You control the meaning, not the LLM
+- There's no ambiguity about what terms mean
+- Changes are explicit and auditable
+- The graph is self-documenting
+
+### The CTO Executive System Example
+
+The CTO Executive System knowledge graph (~500 terms) includes:
+
+```json
+{
+  "entities": [
+    "alex_mikhalev",
+    "openclaw",
+    "terraphim",
+    "gitea",
+    "github"
+  ],
+  "concepts": [
+    "knowledge_graph",
+    "meta_cortex",
+    "concept_mining",
+    "skill",
+    "agent",
+    "multi_agent"
+  ],
+  "terms": [
+    "pagerank",
+    "rust_genai",
+    "memory",
+    "session",
+    "superposition"
+  ]
+}
+```
+
+Notice the structure: entities (people, systems), concepts (architectural patterns), terms (technical vocabulary). This is a manageable ~500 terms that covers the entire operating context.
+
+## Defining Edges: Synonym Relationships, Hierarchical Relations
+
+Once you have nodes, you need **edges** — the relationships between them.
+
+### Types of Edges
+
+| Edge Type | Description | Example |
+|-----------|-------------|---------|
+| **synonym** | Alternative terms for the same concept | "heart attack" ↔ "myocardial infarction" |
+| **hierarchical** | Parent-child relationships | Mammal → Animal |
+| **associative** | Related but not hierarchical | Drug → SideEffect |
+| **causal** | One causes another | Input → Output |
+| **temporal** | Time-based sequence | OrderPlaced → OrderShipped |
+
+### Synonym Edges: The Foundation
+
+Synonym edges are the most important for search. They enable flexible querying while maintaining semantic precision:
+
+```json
+{
+  "relationship": "synonym",
+  "from": "myocardial infarction",
+  "to": "heart attack",
+  "confidence": 1.0
+}
+```
+
+The thesaurus pattern (from Chapter 5) expands this:
+
+```json
+{
+  "term": "myocardial infarction",
+  "synonyms": [
+    "heart attack",
+    "MI",
+    "cardiac infarction"
+  ],
+  "related": [
+    "coronary artery disease",
+    "angina"
+  ],
+  "broader": "cardiovascular disease",
+  "narrower": ["STEMI", "NSTEMI"]
+}
+```
+
+### Hierarchical Edges: Taxonomy
+
+Hierarchical edges create structure:
+
+```json
+{
+  "relationship": "broader",
+  "from": "migraine",
+  "to": "headache disorder"
+}
+{
+  "relationship": "narrower",
+  "from": "migraine with aura",
+  "to": "migraine"
+}
+```
+
+This enables queries like "show all types of migraine" by traversing the "narrower" edges.
+
+### The Research Knowledge Graph Example
+
+From the CTO Executive System research layer:
+
+```
+research, investigation, study, analysis, inquiry
+explore, investigate, examine, analyze, study
+compare, contrast, evaluate, assess, review
+```
+
+These synonym groups enable searching for research documents using any of the terms.
+
+## Schema Design: Base Schema + Project-Type Extensions
+
+A good knowledge graph schema has a **base** that applies to all projects and **extensions** specific to project types.
+
+### Base Schema
+
+The base schema defines universal structure:
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "definitions": {
+    "entity": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["entity", "concept", "term", "document"] },
+        "description": { "type": "string" },
+        "metadata": { "type": "object" }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["from", "relationship_type", "to"],
+      "properties": {
+        "from": { "type": "string" },
+        "relationship_type": {
+          "type": "string",
+          "enum": ["synonym", "broader", "narrower", "related", "causes", "precedes"]
+        },
+        "to": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}
+```
+
+### Project-Type Extensions
+
+Extend the base for specific contexts:
+
+```json
+{
+  "project_type": "healthcare",
+  "extensions": {
+    "entity_types": ["drug", "disease", "procedure", "anatomy"],
+    "relationship_types": ["treats", "contraindicated_for", "has_active_ingredient"]
+  }
+}
+```
+
+```json
+{
+  "project_type": "ecommerce",
+  "extensions": {
+    "entity_types": ["product", "order", "customer", "inventory"],
+    "relationship_types": ["contains", "ships_to", "purchased"]
+  }
+}
+```
+
+This approach gives you the best of both worlds: consistent structure across projects with specialized vocabulary for each domain.
+
+## Validation: JSON Schema with Local $ref Resolution
+
+Validation is critical. A knowledge graph with invalid structure is worse than no graph — it gives false confidence.
+
+### JSON Schema Validation
+
+Use JSON Schema to validate the graph structure:
+
+```bash
+# Validate against schema
+ajv -s knowledge-graph-schema.json -d knowledge-graph.json
+```
+
+### Common Validation Rules
+
+1. **No orphan nodes**: Every node must have at least one relationship
+2. **No circular synonyms**: Synonym chains should not form loops
+3. **Bidirectional edges**: If A relates to B, B should relate to A (or explicitly not)
+4. **Type consistency**: All "drug" nodes must have required fields
+
+### Local $ref Resolution
+
+For large graphs, use local references to split the schema:
+
+```json
+{
+  "$ref": "schemas/definitions.json#/definitions/entity"
+}
+```
+
+This keeps schemas modular and manageable.
+
+## Building the Thesaurus: Synonym Expansion Patterns
+
+The **thesaurus** is the heart of the synonym system. Building it requires patterns:
+
+### Pattern 1: Exact Synonyms
+
+Terms that mean exactly the same thing:
+
+```
+myocardial infarction = heart attack = MI
+```
+
+### Pattern 2: Acronyms
+
+```
+MI = myocardial infarction
+MVP = minimum viable product
+```
+
+### Pattern 3: Spelling Variations
+
+```
+colour = color (British vs American)
+organise = organize
+```
+
+### Pattern 4: Domain-Specific
+
+```
+client (sales) = subscriber (support) = party (legal)
+```
+
+### Pattern 5: Related but Not Synonymous
+
+These go in the "related" field, not "synonym":
+
+```
+migraine related to: stress, sleep deprivation, certain foods
+```
+
+### Building Process
+
+1. **Start with core terms**: List the 50-100 most important concepts
+2. **Expand with synonyms**: Add known synonyms for each
+3. **Validate consistency**: Ensure no contradictory synonyms
+4. **Test with queries**: Run common queries, verify results
+5. **Iterate**: Add terms as new use cases emerge
+
+## Practical Example: CTO Executive System Knowledge Graph
+
+The CTO Executive System knowledge graph demonstrates the practical application of these principles:
+
+### Scale
+
+- ~500 terms across multiple roles (personal, code, research)
+- 24 core concepts in the main index
+- Role-based filtering (different contexts see different subsets)
+
+### Structure
+
+```json
+{
+  "concepts": [
+    "terraphim",
+    "openclaw",
+    "knowledge_graph",
+    "meta_cortex",
+    "skill",
+    "agent",
+    "multi_agent"
+  ],
+  "by_role": {
+    "personal": 9,
+    "code": 12,
+    "research": 3
+  }
+}
+```
+
+### Synonym Expansion
+
+The research layer includes:
+
+```
+research, investigation, study, analysis, inquiry
+documentation, docs, guide, manual, reference
+pattern, approach, method, technique, strategy
+```
+
+This enables searching across all research documents using any synonym.
+
+### Validation Results
+
+- No orphan nodes (every concept has relationships)
+- Consistent type assignments
+- Bidirectional synonyms where appropriate
+
+## Concept Modelling in Practice: From Domain Model to KG Schema
+
+Recall from Chapter 1 and Chapter 4 the concept modelling fundamentals. Now we apply them:
+
+### Step 1: Define Entities
+
+From your domain model (Chapter 4), list all entities:
+
+```
+Product, Customer, Order, LineItem, Payment, Shipment
+```
+
+### Step 2: Define Attributes
+
+For each entity, define attributes:
+
+```
+Product: name, sku, price, category,库存
+Customer: id, name, email, tier
+Order: id, customer_id, status, total
+```
+
+### Step 3: Define Relationships
+
+How do entities relate?
+
+```
+Customer places Order
+Order contains LineItem
+LineItem references Product
+Order has Payment
+Order has Shipment
+```
+
+### Step 4: Define Constraints
+
+What rules must always hold?
+
+```
+Order.total = sum(LineItem.price)
+Order.status in [pending, processing, shipped, delivered]
+Payment.amount > 0
+```
+
+### Step 5: Map to KG Schema
+
+Translate to graph structure:
+
+```json
+{
+  "nodes": [
+    {"id": "Product", "type": "entity"},
+    {"id": "Order", "type": "entity"},
+    {"id": "total", "type": "attribute", "parent": "Order"}
+  ],
+  "edges": [
+    {"from": "Order", "type": "contains", "to": "LineItem", "cardinality": "one-to-many"},
+    {"from": "LineItem", "type": "references", "to": "Product", "cardinality": "many-to-one"}
+  ],
+  "constraints": [
+    {"type": "sum", "attribute": "Order.total", "parts": ["LineItem.price"]}
+  ]
+}
+```
+
+This mapping from domain model to knowledge graph schema is the core skill of context engineering.
+
+## Summary: Building a Knowledge Graph
+
+Building a knowledge graph is a structured process:
+
+1. **Define nodes** — entities, concepts, terms, documents using vocabulary-first approach
+2. **Define edges** — synonym, hierarchical, associative, causal, temporal relationships
+3. **Design schema** — base schema + project-type extensions
+4. **Validate** — JSON Schema with local $ref resolution
+5. **Build thesaurus** — synonym expansion patterns
+6. **Apply concept modelling** — from domain model to KG schema
+
+The result is a knowledge graph that provides precise, explainable, auditable context for your AI system.
+
+## Key Sources
+
+- CTO Executive System knowledge graph implementation (~500 terms)
+- JSON Schema specification (draft-07)
+- Terraphim AI schema design patterns
+- Zestic AI framework on vocabulary-first approaches
+- SNOMED CT schema design for healthcare
