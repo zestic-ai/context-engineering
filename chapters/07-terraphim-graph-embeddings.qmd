@@ -1,15 +1,248 @@
-# Chapter 7: Knowledge Graph Grounding as Safety Gate
+# Chapter 7: Terraphim Graph Embeddings: The 100% Accurate Approach
 
-*TODO: Write content*
+In the previous chapter, we compared deterministic search to vector embeddings and established that deterministic approaches win on precision, explainability, and cost. Now we dive deep into Terraphim's specific implementation: **graph embeddings** that achieve 100% accuracy for known terms.
 
-## Chapter Outline
+The key insight is that instead of compressing knowledge into vectors (which loses information), Terraphim preserves the full graph structure and adds a deterministic scoring layer on top.
 
-- TODO: Add outline items
+## Explicit Relationships vs Inferred Similarity
 
-## Key Points to Cover
+Traditional vector embeddings infer relationships from statistical patterns in training data. If documents about "aspirin" and "headache" often appear together, the model assumes they are related. But this is implicit — the model cannot tell you *why* they are related.
 
-1. TODO: Add key points
+Terraphim takes a different approach: **explicit relationships defined in the knowledge graph**.
 
-## Sources
+```
+Aspirin --[treats]--> Headache
+Aspirin --[has_active_ingredient]--> Acetylsalicylic acid
+Aspirin --[contraindicated_for]--> Peptic ulcer
+```
 
-- TODO: Add sources
+These relationships are explicit, typed, and queryable. The system doesn't guess — it looks up the relationship in the graph.
+
+### Why Explicit Beats Implicit
+
+| Aspect | Explicit (Terraphim) | Inferred (Embeddings) |
+|--------|---------------------|----------------------|
+| **Relationship type** | Typed ("treats", "contraindicated_for") | Generic similarity |
+| **Can identify** | Exactly why A relates to B | "They're similar" |
+| **Confidence** | Certain for known terms | Probabilistic |
+| **New relationships** | Must be added to graph | Inferred automatically |
+
+For safety-critical applications (healthcare, finance, legal), you need to know *why* — not just that there's a relationship.
+
+## Deterministic Ranking: Same Query → Same Results
+
+One of the most important properties of Terraphim's approach is **determinism**: the same query always produces the same results.
+
+This seems obvious — shouldn't all search systems work this way? But vector embeddings are inherently probabilistic. Run the same query on different days and you might get different results because:
+
+- The index was updated
+- The embedding model was retrained
+- There's randomness in the similarity calculation
+- Floating-point precision differences
+
+For production AI systems, non-determinism is a nightmare:
+
+- **Testing becomes impossible**: You can't write reliable tests when results vary
+- **Auditing becomes impossible**: You can't trace why a particular result was returned
+- **Debugging becomes impossible**: You can't reproduce the user's issue
+
+Terraphim solves this by using deterministic algorithms:
+
+1. **Aho-Corasick automaton** for term matching — always finds the same matches
+2. **Graph traversal** for relationship lookup — always finds the same paths
+3. **Connectivity-based scoring** — always produces the same scores for the same graph state
+
+Run the query 100 times, get the same results 100 times. This is essential for production systems.
+
+## Explainable Results: Trace Exactly Why a Document Matched
+
+When a Terraphim query returns results, you can trace exactly why:
+
+1. **Term match**: Which term in the query matched?
+2. **Position**: At what character position in the document?
+3. **Synonym expansion**: Which synonym mapped to the canonical term?
+4. **Relationship path**: What path through the graph connects the matched term to the document?
+5. **Score**: How was the final score calculated?
+
+This is a complete audit trail. When regulators ask "why did the system return this?", you can show:
+
+> "Term 'Warfarin' in the query matched at position 1,420 in document 'drug-interactions.md'. This document was linked to the 'contraindicated_for' relationship in the knowledge graph, connecting Warfarin to 'Bleeding risk' — which your medication list includes as a condition. Score: 0.95."
+
+Compare this to vector embeddings:
+
+> "The cosine similarity between your query vector and this document chunk was 0.87."
+
+One answer satisfies an auditor. The other does not.
+
+## No Information Loss: Full Graph Structure Preserved
+
+Vector embeddings compress complex information into numerical vectors. A knowledge graph with 10,000 entities and 100,000 relationships cannot be fully represented in a 1,536-dimensional vector. Information is lost.
+
+Terraphim preserves the **full graph structure**:
+
+- Every entity is explicitly stored
+- Every relationship type is preserved
+- Every relationship has a direction and properties
+- The graph can be queried at any depth
+
+This means:
+
+- **No hidden assumptions**: You see everything the system knows
+- **Complete auditing**: The entire knowledge state is inspectable
+- **Consistent behavior**: Changes to the graph are predictable
+
+## Role-Based Graphs: Different Synonym Edges Per Context Role
+
+One of Terraphim's most powerful features is **role-based graphs**: the same entities can have different relationships depending on the context role.
+
+### The Problem with Single Vocabularies
+
+In a traditional knowledge base, "Client" means one thing. But in a complex organization:
+
+- In **sales** context, "client" means "prospect or customer"
+- In **support** context, "client" means "someone with an active subscription"
+- In **legal** context, "client" means "party to a contract"
+
+Using the same vocabulary for all contexts leads to confusion and incorrect results.
+
+### Terraphim's Solution: Role-Based Graphs
+
+Terraphim creates **different synonym edges per context role**:
+
+```json
+{
+  "entity": "client",
+  "roles": {
+    "sales": {
+      "synonyms": ["prospect", "lead", "customer", "buyer"],
+      "relevant_relationships": ["opportunity", "pipeline", "deal"]
+    },
+    "support": {
+      "synonyms": ["subscriber", "account holder", "licensee"],
+      "relevant_relationships": ["ticket", "subscription", "entitlement"]
+    },
+    "legal": {
+      "synonyms": ["party", "counterparty", "contractor"],
+      "relevant_relationships": ["contract", "obligation", "liability"]
+    }
+  }
+}
+```
+
+When you query the knowledge graph, you specify the role. The system uses only the synonyms and relationships relevant to that role.
+
+This is crucial for enterprise AI: the same term means different things in different contexts, and the AI system must reflect that.
+
+## The Aho-Corasick Automata Approach
+
+At the heart of Terraphim's performance is the **Aho-Corasick algorithm** — a fast pattern-matching algorithm that finds all matches in a single scan through the text.
+
+### Why Aho-Corasick?
+
+Traditional approaches scan through each pattern separately:
+
+```
+Text: "patient has migraine"
+Pattern 1: "patient" → scan text, check match
+Pattern 2: "migraine" → scan text, check match
+Pattern 3: "headache" → scan text, check match
+... (repeat for 1.4M patterns)
+```
+
+This is O(n × m) — text length times number of patterns. With 1.4M patterns, this is impossibly slow.
+
+Aho-Corasick builds a **finite-state automaton** from all patterns at once:
+
+1. **Build the automaton**: All 1.4M patterns are compiled into a single state machine
+2. **Single scan**: The text is scanned once, transitioning through the automaton
+3. **All matches found**: Every pattern that appears in the text is identified in O(n)
+
+This gives:
+
+- **<1ms** for 1.4M patterns (tested with SNOMED CT)
+- **Linear time complexity**: O(text_length) regardless of pattern count
+- **Zero runtime cost**: The automaton is compiled once at build time
+
+### Precompiled Automata
+
+Terraphim compiles the automaton at build time, not runtime:
+
+- The vocabulary is defined in JSON/YAML
+- A build script compiles it into a binary automaton
+- At runtime, the automaton is loaded from disk
+- No parsing, no construction, no setup cost
+
+This is why Terraphim is "instantaneous" — there's no cold start, no model loading, no initialization delay.
+
+## How the Graph Scorer Works: Connectivity-Based Ranking
+
+Once the Aho-Corasick automaton finds matching terms, how does Terraphim rank the results?
+
+### The Scorer Algorithm
+
+1. **Find all matching terms** in the document (via Aho-Corasick)
+2. **Look up each term** in the knowledge graph
+3. **Traverse relationships** to find connections to the query
+4. **Score by connectivity**: More connections = higher score
+5. **Return ranked results**
+
+```python
+def score_document(query, document, knowledge_graph):
+    # Find terms in document that match query terms
+    matched_terms = find_matches(query.terms, document.text)
+    
+    total_score = 0
+    for term in matched_terms:
+        # Look up term in knowledge graph
+        term_node = knowledge_graph.get(term)
+        
+        # Find paths to query entity
+        paths = graph.find_paths(term_node, query.entity, max_depth=3)
+        
+        # Score by path strength
+        for path in paths:
+            total_score += path.weight * path.confidence
+    
+    return total_score
+```
+
+### What "Connectivity" Means
+
+Connectivity-based ranking is intuitive:
+
+- **Direct relationship**: Drug treats Disease → high score
+- **Indirect relationship**: Drug affects Gene, Gene associated with Disease → medium score
+- **No relationship**: Drug unrelated to query → zero score
+
+The score is not "magic" — it's traceable. You can see exactly which connections contributed to the score and by how much.
+
+### Why This Beats Vector Similarity
+
+Vector similarity tries to capture "overall similarity" in a single number. But documents can be similar in some ways and different in others:
+
+- Document A: matches on 5 terms, all low-weight
+- Document B: matches on 2 terms, both high-weight
+
+Which is more relevant? Vector similarity might give similar scores. Terraphim's connectivity scoring can distinguish this because it weights by relationship type and depth.
+
+## Summary: The Terraphim Approach
+
+Terraphim provides a fundamentally different approach to AI search:
+
+1. **Explicit relationships** — typed, directional, queryable
+2. **Deterministic** — same query always returns same results
+3. **Explainable** — complete audit trail for every result
+4. **No information loss** — full graph structure preserved
+5. **Role-based** — different synonyms/relationships per context
+6. **Fast** — Aho-Corasick automaton finds 1.4M patterns in <1ms
+7. **Connectivity-based ranking** — scores by graph relationship strength
+
+This is not a replacement for all AI approaches. But for the 80% of queries where precision, explainability, and cost matter, Terraphim's deterministic approach is superior.
+
+## Key Sources
+
+- Terraphim AI technical documentation and implementation
+- Aho-Corasick algorithm (1975) — original paper
+- MedGemma competition results (demonstrating 100% grounding)
+- Terraphim role-based graph configuration patterns
+- CTO Executive System knowledge graph implementation
