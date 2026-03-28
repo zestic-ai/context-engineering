@@ -28,6 +28,8 @@ This is not "prompt engineering." Prompt engineering focuses on optimizing the i
 
 The key insight is that **context is infrastructure**. Just as code is infrastructure that must be versioned, tested, and validated, context is infrastructure that must be designed, managed, and monitored. When context fails, the AI fails—even if the code is perfect.
 
+This framework was articulated by Turkhanov of Zestic AI in 2025 as "the missing discipline of software architecture." It draws from older traditions—engineering control from the 1960s, domain-driven design from the 2000s—adapted for the AI era.
+
 ## What You Will Learn
 
 This book is organized into six parts, progressing from foundational understanding to practical implementation:
@@ -80,9 +82,10 @@ If you are a technical architect or engineering leader, pay special attention to
 
 This book draws from multiple sources:
 
+- **Primary Framework**: Zestic AI's "Context Engineering: The Missing Discipline" (Turkhanov, 2025) — the foundational framework this book builds upon
 - **Real systems**: OpenClaw (the AI assistant system I maintain), Terraphim (knowledge graph platform), various enterprise deployments
 - **Case studies**: The MedGemma competition (where knowledge graph grounding prevented a dangerous 10x dosage error), enterprise RAG failures and successes
-- **Research**: Microsoft GraphRAG, academic literature on knowledge graphs, vector embeddings, and AI safety
+- **Research**: Microsoft GraphRAG, Armin Ronacher's "Agent Design Is Still Hard," academic literature on knowledge graphs, vector embeddings, and AI safety
 - **Practitioner experience**: Lessons learned from building AI systems in production
 
 Where possible, I cite primary sources. Where I draw on experience, I try to make the underlying principles explicit so you can apply them to your context.

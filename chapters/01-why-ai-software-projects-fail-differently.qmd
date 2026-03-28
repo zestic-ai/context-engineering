@@ -28,7 +28,21 @@ In AI systems, "context" encompasses everything the model uses to generate outpu
 
 Consider a customer service chatbot trained on support tickets from 2024. By 2026, the product has changed three times. The model's knowledge of the product is now inconsistent with reality. But the system doesn't crash. It just gives answers that are subtly wrong. The drift is invisible until a customer receives incorrect information.
 
-This is the first way AI fails differently: **the failures are not errors—they are慢性的 (chronic) misalignment**.
+This is the first way AI fails differently: **the failures are not errors—they are chronic misalignment**.
+
+### Enter Context Engineering
+
+In 2025, Turkhanov of Zestic AI articulated what many practitioners had suspected but couldn't name: **context engineering is the missing discipline of software architecture**. The core insight is that while code complexity is technical and manageable through modularization, context complexity is semantic—shaped by assumptions, stakeholder interpretations, evolving business models, and shifting objectives.
+
+The Zestic AI framework identifies key failure patterns in enterprise AI programs:
+
+- **Stakeholders reinterpret goals downstream** — what was agreed in discovery becomes something different in development
+- **Account teams commit to outcomes before feasibility validation** — commercial urgency overrides engineering baselines
+- **Domain definitions drift between workshops** — the same terms mean different things to different people
+- **Artefacts exist but are not reconciled** — documents contradict each other invisibly
+- **Stage gates become ceremonial** — progress happens without semantic checkpoints
+
+When context expands faster than it is structured, **entropy wins**. This is not a bug that can be fixed with more code—it is a structural condition that requires engineering discipline.
 
 ## Hallucination as Feature, Not Bug
 
@@ -123,3 +137,9 @@ AI software fails differently because:
 The rest of this book is about solving these problems. But first, we must internalize that the problems exist. Traditional software engineering is necessary but not sufficient. We need Context Engineering as a discipline in its own right.
 
 In the next chapter, we will define what "context" actually means in AI development—not as a vague catch-all, but as a multi-dimensional engineering problem with specific components that can be measured, managed, and validated.
+
+## Key Sources
+
+- Turkhanov, "Context Engineering: The Missing Discipline" (Zestic AI, 2025)
+- Armin Ronacher, "Agent Design Is Still Hard"
+- MedGemma competition case study
