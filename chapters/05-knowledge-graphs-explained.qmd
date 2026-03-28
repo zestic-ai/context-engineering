@@ -1,25 +1,236 @@
 # Chapter 5: Knowledge Graphs Explained
 
-*TODO: Write content*
+In the previous chapter, we established that context must be architected — structured, baselined, and managed like the critical infrastructure it is. Now we turn to one of the most powerful tools for implementing that architecture: the **knowledge graph**.
 
-## Chapter Outline
+Knowledge graphs provide a way to represent meaning that is explicit, queryable, and grounded in reality. In the context of AI systems, they serve as the semantic backbone that enables precise retrieval, validation, and reasoning.
 
-- What is a knowledge graph? Nodes, edges, and semantic relationships
-- Historical context: Google's knowledge graph, enterprise ontologies
-- The resurgence of knowledge graphs in the AI era (GraphRAG 2024-2025)
-- Knowledge graphs vs vector databases: complementary approaches
-- The role of ontologies and controlled vocabularies
-- Case study: SNOMED CT in healthcare AI
+## What Is a Knowledge Graph?
 
-## Key Points to Cover
+A **knowledge graph** is a structure for representing knowledge as a network of **entities** (nodes) and **relationships** (edges). Unlike databases that store flat records or documents that contain unstructured text, knowledge graphs capture the *meaning* of information by explicitly stating how things relate.
 
-1. KG basics: entities, relationships, properties
-2. Why KGs matter for AI context
-3. Comparison with vector databases
-4. Real-world enterprise examples
+### The Basic Structure
 
-## Sources
+At its simplest, a knowledge graph consists of:
 
-- Microsoft GraphRAG paper
-- Terraphim AI documentation
-- SNOMED CT case studies
+- **Nodes** (also called vertices): Represent entities, concepts, or things
+- **Edges** (also called relationships or arcs): Represent how nodes relate to each other
+- **Properties** (also called attributes): Describe nodes and edges
+
+```
+        (Drug)
+         /    \
+   treats   has_active_ingredient
+         /        \
+   (Disease) ---- (Compound)
+```
+
+In this tiny graph:
+- "Drug" and "Disease" are nodes
+- "treats" is an edge from Drug to Disease
+- "has_active_ingredient" is an edge from Drug to Compound
+
+This explicit structure is what differentiates knowledge graphs from other data structures. When you ask "What does Drug X treat?", the answer is not inferred from text — it is explicitly stated as a relationship.
+
+### Triples: The Atomic Unit
+
+The fundamental unit of a knowledge graph is the **triple**: subject-predicate-object.
+
+```
+(Subject) --[Predicate]--> (Object)
+(Drug A)   --[treats]----> (Disease B)
+```
+
+Every piece of knowledge in the graph can be expressed as a triple. This simplicity is powerful: it makes the knowledge machine-readable, queryable, and verifiable.
+
+### Real-World Example: SNOMED CT
+
+The most extensive knowledge graph in healthcare is **SNOMED CT** (Systematized Nomenclature of Medicine — Clinical Terms). It contains over 500,000 concepts and millions of relationships between them.
+
+SNOMED CT is not a document — it is a graph. When a medical AI queries SNOMED CT, it is not searching text. It is traversing relationships:
+
+- "What drugs treat hypertension?" → traverse "treats" edges from hypertension
+- "What is the active ingredient of Drug X?" → traverse "has_active_ingredient" edge
+- "What are the contraindications for Drug Y?" → traverse "contraindicated_for" edges
+
+This is the power of knowledge graphs: they make knowledge **operational**. The AI can reason over the graph, not just retrieve documents.
+
+## Historical Context
+
+### Google's Knowledge Graph
+
+The modern resurgence of knowledge graphs began in 2012, when Google introduced its **Knowledge Graph** to enhance search results. Suddenly, searching for "Leonardo da Vinci" didn't just return web pages — it displayed a panel with facts: nationality, birth date, famous works, contemporaries.
+
+This was significant because it represented a shift from document retrieval to entity retrieval. Google wasn't just finding pages about Leonardo; it was extracting and structuring knowledge about him.
+
+By 2024, Google's Knowledge Graph informed **over 40% of Google searches**, answering questions directly without requiring users to click through to websites.
+
+### Enterprise Ontologies
+
+Before Google, enterprises had been building ontologies for decades:
+
+- **SNOMED CT** in healthcare (1973-present)
+- **Dublin Core** in library science (1995-present)
+- **OWL** and **RDF** standards from W3C (2004-present)
+- **TopBraid**, **Protege**, and other ontology tools
+
+These efforts showed that knowledge graphs could represent complex domains reliably. But they were expensive to build and maintain, and they did not integrate well with the statistical AI approaches that dominated the 2010s.
+
+## The Resurgence in the AI Era (GraphRAG 2024-2025)
+
+The rise of large language models created a new problem: how do you ensure that AI outputs are accurate? RAG (Retrieval-Augmented Generation) offered a solution — retrieve relevant documents and include them in the prompt.
+
+But naïve RAG had limitations:
+
+- **Document retrieval is probabilistic**: "vectors are close" doesn't guarantee relevance
+- **No explainability**: You can't explain *why* a document was retrieved
+- **No validation**: The model can ignore retrieved documents
+- **No grounding**: The model can hallucinate even when given correct context
+
+In 2024, Microsoft introduced **GraphRAG** — a approach that uses knowledge graphs to structure retrieval. The key insight: instead of retrieving documents, retrieve **entities and relationships** that can be reasoned over directly.
+
+This represented a fundamental shift:
+
+| Naïve RAG | GraphRAG |
+|-----------|----------|
+| Retrieve documents | Extract entities |
+| Probabilistic matching | Deterministic traversal |
+| "Vectors are close" | "Drug treats Disease" |
+| No explainability | Full trace of reasoning |
+| Model can hallucinate | Grounded in graph |
+
+### Why Knowledge Graphs Matter for AI Context
+
+In the context engineering framework, knowledge graphs serve several critical functions:
+
+1. **Semantic backbone**: The domain model (from Chapter 4) is implemented as a knowledge graph
+2. **Precise retrieval**: Queries traverse relationships, not just match keywords
+3. **Validation gate**: Outputs can be verified against the graph
+4. **Explainability**: Every answer can be traced through the graph
+5. **Grounding**: Hallucinations are prevented by explicit constraints
+
+## Knowledge Graphs vs Vector Databases: Complementary Approaches
+
+A common question is whether to use knowledge graphs or vector databases. The answer, increasingly, is **both** — they serve different purposes.
+
+### How Vector Databases Work
+
+Vector databases store **embeddings** — numerical representations of documents or text chunks. When you query a vector database, you find the stored vectors that are **most similar** to your query vector (measured by cosine similarity, dot product, or other distance metrics).
+
+```
+Query: "What drugs treat migraines?"
+↓ [embed into vector space]
+Find closest vectors in database
+↓ [return top-k documents]
+```
+
+The "closeness" is probabilistic. The model doesn't "know" that Drug A treats Migraine — it knows that documents about Drug A and Migraine are statistically similar to the query.
+
+### Strengths and Limitations
+
+| Aspect | Vector Databases | Knowledge Graphs |
+|--------|------------------|------------------|
+| **Query type** | Similarity search | Relationship traversal |
+| **Precision** | Probabilistic | Deterministic |
+| **Explainability** | Low (why those vectors?) | High (trace the path) |
+| **Maintenance** | Easy (add embeddings) | Hard (curate relationships) |
+| **Coverage** | Broad (any text) | Deep (explicit facts) |
+| **Inference** | Limited | Can encode rules |
+
+### When to Use Each
+
+**Use vector databases when:**
+- You have large volumes of unstructured text
+- Queries are open-ended ("What information do you have about X?")
+- Recall matters more than precision
+- You can't enumerate all possible queries
+
+**Use knowledge graphs when:**
+- The domain has explicit structure (entities, relationships, rules)
+- Precision and explainability matter
+- You need validation gates
+- The domain is well-defined (e.g., healthcare, legal, finance)
+
+**Use both when:**
+- You need the breadth of vector search AND the precision of graph traversal
+- Open-ended queries go to vector DB; specific queries go to knowledge graph
+- The knowledge graph validates and filters vector search results
+
+This hybrid approach is covered in Chapter 19.
+
+## The Role of Ontologies and Controlled Vocabularies
+
+A **controlled vocabulary** is a curated list of terms that everyone agrees to use. It eliminates ambiguity: when you say "Patient," everyone knows exactly what you mean.
+
+An **ontology** goes further — it defines not just terms, but the relationships between them. SNOMED CT is both a controlled vocabulary and an ontology.
+
+### Why Controlled Vocabularies Matter for AI
+
+Without controlled vocabularies, the AI system must infer meaning from text. With controlled vocabularies, meaning is explicit:
+
+| Without Controlled Vocabulary | With Controlled Vocabulary |
+|------------------------------|----------------------------|
+| "patient", "pt", "subject", "client" | Single term: Patient |
+| "treats", "indicated for", "therapy for" | Single relationship: treats |
+| AI infers meaning | AI traverses relationship |
+
+The Terraphim knowledge graph uses controlled vocabularies through **synonym expansion** — mapping variant terms to a canonical vocabulary. This allows flexible querying while maintaining semantic precision.
+
+### The Thesaurus Pattern
+
+A **thesaurus** defines synonyms and related terms:
+
+```json
+{
+  "term": "myocardial infarction",
+  "synonyms": ["heart attack", "MI", "cardiac infarction"],
+  "related": ["coronary artery disease", "angina"],
+  "broader": ["cardiovascular disease"],
+  "narrower": ["STEMI", "NSTEMI"]
+}
+```
+
+When the AI receives a query with "heart attack," it maps to "myocardial infarction" and traverses the graph from there. This is the core of Terraphim's approach.
+
+## Case Study: SNOMED CT in Healthcare AI
+
+SNOMED CT is the gold standard for medical knowledge representation. It demonstrates both the power and the challenges of knowledge graphs.
+
+### The Scale
+
+- **500,000+ concepts** (nodes)
+- **Millions of relationships** (edges)
+- **Multiple hierarchies** (clinical findings, procedures, substances, anatomy)
+- **International adoption** in 50+ countries
+
+### The MedGemma Competition
+
+In the MedGemma competition, Terraphim's knowledge graph (built on SNOMED CT and PrimeKG) demonstrated the power of graph-based grounding:
+
+- **543 tests passing** — comprehensive validation
+- **18/18 evaluation cases grounded** — no hallucinations
+- **Specific drug-dose recommendations** — not vague class-level suggestions
+- **10x error prevention** — grounding caught the 800mg vs 80mg error
+
+This case study is covered in detail in Chapter 9, but it illustrates the core principle: a well-structured knowledge graph can prevent dangerous AI failures.
+
+## Summary: Knowledge Graphs as Context Infrastructure
+
+Knowledge graphs provide the infrastructure for managing context at scale:
+
+1. **Explicit structure**: Entities and relationships are machine-readable
+2. **Precise retrieval**: Queries traverse relationships, not just match text
+3. **Validation capability**: Outputs can be verified against the graph
+4. **Explainability**: Every answer can be traced through the graph
+5. **Grounding**: Hallucinations are prevented by explicit constraints
+
+They are not a replacement for vector databases or all AI techniques. Rather, they are a **complementary layer** that adds precision, explainability, and safety to AI systems.
+
+The next chapters explore how knowledge graphs work under the hood, how they compare to vector embeddings, and how to build one for your context.
+
+## Key Sources
+
+- Turkhanov, "Context Engineering: The Missing Discipline" (Zestic AI, 2025)
+- Microsoft GraphRAG paper and documentation
+- SNOMED CT official documentation and release files
+- Terraphim AI documentation and MedGemma competition results
+- PrimeKG (Pharmacological Knowledge Graph) for biomedical relationships
