@@ -1,0 +1,329 @@
+# Chapter 12: Skill Architecture for AI Agents
+
+In the previous chapter, we saw how compression strategies manage context when limits are exceeded. Now we address the foundation those strategies work with: **skill architecture** — how skills are structured, named, and loaded to support progressive disclosure and compression.
+
+## Lightweight Skill Catalogs (~50 Tokens at Startup)
+
+The skill catalog is the minimal representation loaded at startup. It should be **tiny** — just enough information to make activation decisions.
+
+### Catalog Structure
+
+```yaml
+# Skill catalog: ~50 tokens for 20 skills
+skills:
+  - name: web-search
+    triggers: ["search", "web", "find", "lookup", "google"]
+    tier: standard
+    estimated_tokens: 800
+    
+  - name: terraphim-memory
+    triggers: ["memory", "recall", "remember", "kg", "knowledge"]
+    tier: core
+    estimated_tokens: 1200
+    
+  - name: file-editor
+    triggers: ["edit", "modify", "change", "update", "write"]
+    tier: core
+    estimated_tokens: 600
+    
+  - name: code-runner
+    triggers: ["run", "execute", "command", "bash", "shell"]
+    tier: standard
+    estimated_tokens: 400
+```
+
+### Token Cost Breakdown
+
+| Component | Tokens | Purpose |
+|-----------|--------|---------|
+| Skill name | 1-2 per skill | Identifier |
+| Triggers | 2-5 per skill | Activation keywords |
+| Tier | 1 per skill | Priority flag |
+| Est. tokens | 1 per skill | Budget planning |
+| **Total (20 skills)** | **~50** | **Startup cost** |
+
+This is dramatically cheaper than loading full skill content (~16,000 tokens for 20 skills).
+
+## On-Demand Activation Patterns: Trigger-Based Loading
+
+Skills should only load when needed. This is **trigger-based activation**.
+
+### How Triggers Work
+
+```javascript
+class SkillActivator {
+  constructor(skillCatalog) {
+    this.catalog = skillCatalog;
+    this.activeSkills = new Map();
+  }
+  
+  // Determine which skills to activate
+  activateSkills(userQuery) {
+    const query = userQuery.toLowerCase();
+    const activated = [];
+    
+    for (const skill of this.catalog) {
+      const score = this.calculateTriggerScore(skill, query);
+      
+      if (score >= skill.activation_threshold) {
+        activated.push({ skill, score });
+      }
+    }
+    
+    // Sort by score, take top N
+    activated.sort((a, b) => b.score - a.score);
+    return activated.slice(0, this.maxActiveSkills);
+  }
+  
+  calculateTriggerScore(skill, query) {
+    let matches = 0;
+    
+    for (const trigger of skill.triggers) {
+      if (query.includes(trigger.toLowerCase())) {
+        matches++;
+      }
+    }
+    
+    return matches / skill.triggers.length;
+  }
+}
+```
+
+### Activation Threshold
+
+Set a threshold to avoid false positives:
+
+```javascript
+const config = {
+  activation_threshold: 0.7,  // 70% of triggers must match
+  min_trigger_matches: 1      // Minimum 1 trigger must match
+};
+```
+
+### Loading Full Content
+
+When activated, load the full skill:
+
+```javascript
+async function loadSkill(skillName) {
+  const skillPath = `skills/${skillName}/SKILL.md`;
+  const content = await readFile(skillPath);
+  
+  return {
+    name: skillName,
+    content: content,
+    tokens: estimateTokens(content),
+    loadedAt: Date.now()
+  };
+}
+```
+
+## Auto-Deactivation Rules (10 Turns of Non-Use)
+
+Active skills consume tokens. Skills that aren't being used should be **evicted**.
+
+### The 10-Turn Rule
+
+```javascript
+const AUTO_DEACTIVATE_AFTER = 10;  // turns
+
+function shouldDeactivate(skill) {
+  const turnsSinceUse = currentTurn - skill.lastUsedTurn;
+  return turnsSinceUse > AUTO_DEACTIVATE_AFTER;
+}
+```
+
+### Tracking Usage
+
+```javascript
+class SkillTracker {
+  constructor() {
+    this.skillUsage = new Map();
+  }
+  
+  recordUse(skillName) {
+    const skill = this.skillUsage.get(skillName) || {
+      useCount: 0,
+      lastUsedTurn: 0,
+      totalTokens: 0
+    };
+    
+    skill.useCount++;
+    skill.lastUsedTurn = currentTurn;
+    this.skillUsage.set(skillName, skill);
+  }
+  
+  getInactiveSkills(activeSkills) {
+    return activeSkills.filter(s => 
+      currentTurn - s.lastUsedTurn > AUTO_DEACTIVATE_AFTER
+    );
+  }
+}
+```
+
+### Deactivation Process
+
+```javascript
+function autoDeactivate(skills, tracker) {
+  const inactive = tracker.getInactiveSkills(skills);
+  
+  for (const skill of inactive) {
+    console.log(`Auto-deactivating ${skill.name} (unused for ${AUTO_DEACTIVATE_AFTER} turns)`);
+    saveToMemory(skill);  // Persist state before dropping
+    removeFromContext(skill);
+  }
+}
+```
+
+## Maximum 5 Active Skills Simultaneously
+
+More than 5 active skills causes token bloat and reduces quality. Enforce a hard limit.
+
+### Why 5?
+
+| Active Skills | Avg Tokens | Quality Impact |
+|---------------|------------|----------------|
+| 3 | 6,000 | Optimal |
+| 5 | 10,000 | Good |
+| 7 | 14,000 | Degraded |
+| 10 | 20,000 | Poor |
+
+5 skills is the sweet spot: enough capability, manageable context.
+
+### Enforcing the Limit
+
+```javascript
+const MAX_ACTIVE_SKILLS = 5;
+
+function selectActiveSkills(candidates) {
+  // Sort by relevance score
+  candidates.sort((a, b) => b.score - a.score);
+  
+  // Take top N
+  const selected = candidates.slice(0, MAX_ACTIVE_SKILLS);
+  
+  // If we're dropping a skill, save its state
+  const dropped = candidates.slice(MAX_ACTIVE_SKILLS);
+  for (const skill of dropped) {
+    saveSkillState(skill);
+  }
+  
+  return selected;
+}
+```
+
+### Priority When Over Limit
+
+When more than 5 skills trigger:
+
+1. **Tier priority**: Core skills > Standard skills
+2. **Relevance priority**: Higher trigger score > lower
+3. **Recency priority**: Recently used > unused
+
+```javascript
+function prioritizeSkills(candidates) {
+  return candidates.sort((a, b) => {
+    // Tier first (core = 1, standard = 2)
+    if (a.tier !== b.tier) return a.tier - b.tier;
+    
+    // Then score
+    if (b.score !== a.score) return b.score - a.score;
+    
+    // Then recency
+    return b.lastUsedTurn - a.lastUsedTurn;
+  });
+}
+```
+
+## Building the Skill Taxonomy: Naming, Triggers, Metadata
+
+A well-designed skill taxonomy makes activation decisions reliable.
+
+### Naming Convention
+
+Skills should have clear, consistent names:
+
+```
+# Good names
+web-search
+file-editor
+code-runner
+database-query
+image-processor
+
+# Bad names
+web (ambiguous)
+editor (too generic)
+run (unclear what it runs)
+```
+
+### Trigger Design
+
+Triggers should be:
+
+- **Specific**: "kubernetes" not "k8s" (unless both are included)
+- **Complete**: Include all common variants
+- **Mutually exclusive**: Don't overlap with other skills
+
+```yaml
+# Good trigger design
+skill: web-search
+triggers:
+  - search      # core verb
+  - web         # domain
+  - find        # synonym
+  - lookup      # synonym
+  - google      # specific tool
+  - duckduckgo  # specific tool
+
+# Avoid trigger overlap
+skill: web-search
+  - search
+skill: database-query  
+  - search  # PROBLEM: overlaps with web-search
+```
+
+### Metadata Schema
+
+```yaml
+# Complete skill metadata
+skill:
+  name: string           # Unique identifier
+  version: semver        # For compatibility
+  
+  tier: core | standard | optional  # Priority tier
+  
+  triggers:              # Activation keywords
+    - string
+    
+  estimated_tokens:      # For budget planning
+    number
+    
+  dependencies:          # Other skills needed
+    - skill_name
+        
+  auto_deactivate:       # Turns before eviction
+    number (default: 10)
+    
+  compression_priority:  # Drop order when constrained
+    number (1 = first)
+```
+
+## Summary: Skills as Context Modules
+
+Skill architecture provides the foundation for context management:
+
+1. **Lightweight catalog**: ~50 tokens at startup
+2. **Trigger-based activation**: Load only when needed
+3. **Auto-deactivation**: Evict after 10 turns of non-use
+4. **Maximum 5 active**: Enforce hard limit for quality
+5. **Taxonomy**: Consistent naming, triggers, metadata
+
+These patterns work with the compression strategies from Chapter 11 to keep context within budget.
+
+## Key Sources
+
+- Context Optimizer skill implementation
+- Claude Code skill architecture
+- OpenClaw skill loading patterns
+- Progressive disclosure design patterns
