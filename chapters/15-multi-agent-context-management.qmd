@@ -1,0 +1,424 @@
+# Chapter 15: Multi-Agent Context Management
+
+In the previous chapter, we saw how validation gates ensure quality. Now we address how to manage context when **multiple AI agents work together** — orchestrating sub-agents, sharing context, and maintaining coherence.
+
+Modern AI systems rarely use a single agent. They spawn sub-agents for parallel work, delegate tasks, and coordinate responses. This creates new context challenges: what context should each agent have? How do they share information? How do you prevent context explosion?
+
+## Sub-Agent Orchestration Patterns in Claude Code
+
+Claude Code supports **sub-agent spawning** — creating child agents that can work independently or in parallel.
+
+### Spawn Patterns
+
+```javascript
+// Pattern 1: Sequential sub-agents
+// Agent A does part 1, passes to Agent B for part 2
+async function sequentialWork(task) {
+  const part1 = await spawn({
+    task: "Analyze requirements",
+    runtime: "subagent"
+  });
+  
+  const part2 = await spawn({
+    task: "Implement based on analysis",
+    context: part1.results,  // Pass context
+    runtime: "subagent"
+  });
+  
+  return part2.results;
+}
+
+// Pattern 2: Parallel sub-agents
+// Agents A, B, C work simultaneously, then merge
+async function parallelWork(task) {
+  const [analysis, implementation, testing] = await Promise.all([
+    spawn({ task: "Analyze requirements", runtime: "subagent" }),
+    spawn({ task: "Implement features", runtime: "subagent" }),
+    spawn({ task: "Write tests", runtime: "subagent" })
+  ]);
+  
+  return mergeResults([analysis, implementation, testing]);
+}
+
+// Pattern 3: Hierarchical sub-agents
+// Manager agent coordinates specialist agents
+async function hierarchicalWork(task) {
+  const manager = await spawn({
+    task: "Coordinate feature implementation",
+    runtime: "subagent"
+  });
+  
+  // Manager spawns specialists internally
+  return manager.results;
+}
+```
+
+### Context Passing
+
+```javascript
+// What gets passed to sub-agents?
+const subAgentConfig = {
+  // Minimal: just what's needed
+  context: {
+    task: "Specific task description",
+    relevantFiles: ["file1.ts", "file2.ts"],
+    constraints: ["Use TypeScript", "No external APIs"],
+    background: "Previous work summary"
+  },
+  
+  // Or full context (careful with token limits)
+  fullContext: false,  // Don't pass everything
+  maxTokens: 8000      // Limit sub-agent context
+};
+```
+
+## Session Persistence and Memory Across Turns
+
+When an agent works across multiple turns, it needs **memory** — not just the immediate context, but what happened before.
+
+### Memory Types
+
+| Type | Contents | Retention |
+|------|----------|-----------|
+| **Working memory** | Current conversation | Current session |
+| **Session memory** | Recent turns (last 50) | Current session |
+| **Long-term memory** | Past sessions, key learnings | Permanent |
+| **Shared memory** | Context visible to all agents | Per orchestration |
+
+### Memory Management
+
+```javascript
+class AgentMemory {
+  constructor() {
+    this.working = [];     // Current turn
+    this.session = [];     // Last N turns
+    this.longTerm = {};    // Persistent key-value
+  }
+  
+  // Add to current turn
+  addWorking(content) {
+    this.working.push(content);
+  }
+  
+  // Promote to session
+  promoteToSession() {
+    this.session.push(...this.working);
+    this.working = [];
+    
+    // Trim if too long
+    if (this.session.length > 50) {
+      this.session = this.session.slice(-50);
+    }
+  }
+  
+  // Store long-term
+  storeLongTerm(key, value) {
+    this.longTerm[key] = value;
+  }
+  
+  // Retrieve with decay (older = less relevant)
+  retrieve(query, maxAge = 10) {
+    const recent = this.session
+      .filter(t => t.age < maxAge)
+      .filter(t => t.relevance(query) > 0.5);
+    
+    return recent;
+  }
+}
+```
+
+### Persistence Strategies
+
+```javascript
+// Strategy 1: Summarize and store
+async function persistMemory(memory) {
+  const summary = await summarize(memory.session);
+  await store("sessions/current", {
+    summary,
+    keyDecisions: memory.keyDecisions,
+    learnedPatterns: memory.learnedPatterns
+  });
+}
+
+// Strategy 2: Compress old turns
+function compressMemory(memory, maxTokens = 2000) {
+  // Keep recent turns verbatim
+  // Compress older turns
+  const recent = memory.session.slice(-10);
+  const older = memory.session.slice(0, -10);
+  const compressed = compress(older);
+  
+  return [...compressed, ...recent];
+}
+```
+
+## Context Isolation vs Shared Context Tradeoffs
+
+When multiple agents work together, you face a fundamental tradeoff: **isolation** (each agent has its own context) vs **sharing** (agents see each other's context).
+
+### Isolation Model
+
+```javascript
+// Each agent gets isolated context
+const isolated = {
+  agents: [
+    { id: "A", context: { files: ["file1.ts"] } },
+    { id: "B", context: { files: ["file2.ts"] } },
+    { id: "C", context: { files: ["file3.ts"] } }
+  ],
+  // Agents cannot see each other's work
+  // Safe but redundant
+};
+```
+
+**Pros:**
+- No cross-contamination
+- Each agent focused on its task
+- Simpler to reason about
+
+**Cons:**
+- Duplicated context (three agents, three copies)
+- No collaboration on shared concepts
+- Harder to maintain coherence
+
+### Shared Context Model
+
+```javascript
+// All agents see shared context
+const shared = {
+  sharedContext: {
+    files: ["file1.ts", "file2.ts", "file3.ts"],
+    knowledgeGraph: kg,
+    memory: sharedMemory
+  },
+  agents: [
+    { id: "A", role: "analyzer", access: "full" },
+    { id: "B", role: "implementer", access: "full" },
+    { id: "C", role: "reviewer", access: "full" }
+  ]
+};
+```
+
+**Pros:**
+- Efficient (one copy of context)
+- Natural collaboration
+- Coherent outputs
+
+**Cons:**
+- Risk of context pollution
+- Harder to debug
+- Token limits hit faster
+
+### Hybrid Approach
+
+```javascript
+// Most context isolated, key info shared
+const hybrid = {
+  // Shared: essential information
+  shared: {
+    knowledgeGraph: kg,
+    currentTask: task.description,
+    constraints: task.constraints,
+    decisions: []  // Append-only decision log
+  },
+  
+  // Isolated: agent-specific
+  agents: [
+    { 
+      id: "A", 
+      isolated: { 
+        files: ["file1.ts"], 
+        analysis: [] 
+      } 
+    },
+    // ...
+  ]
+};
+```
+
+## Terraphim Knowledge Graph Integration for Agents
+
+The Terraphim knowledge graph (Chapters 5-9) provides a **shared semantic backbone** that multiple agents can use.
+
+### Agent-KG Integration
+
+```javascript
+class AgentKGIntegration {
+  constructor(knowledgeGraph) {
+    this.kg = knowledgeGraph;
+  }
+  
+  // Agent queries the shared knowledge graph
+  async query(agent, query) {
+    const results = await this.kg.search(query);
+    
+    // Log query for context
+    await this.log(agent, query, results);
+    
+    return results;
+  }
+  
+  // Agent validates against KG
+  async validate(agent, output) {
+    const entities = extractEntities(output);
+    const validation = [];
+    
+    for (const entity of entities) {
+      const exists = await this.kg.has(entity);
+      const relationships = await this.kg.getRelationships(entity);
+      
+      validation.push({ entity, exists, relationships });
+    }
+    
+    return validation;
+  }
+  
+  // Log agent activity for audit
+  async log(agent, action, results) {
+    const entry = {
+      timestamp: Date.now(),
+      agent: agent.id,
+      action,
+      resultsCount: results.length
+    };
+    
+    await this.kg.addLogEntry(entry);
+  }
+}
+```
+
+### Shared Vocabulary
+
+```javascript
+// All agents use the same vocabulary
+const sharedVocabulary = {
+  // Entities
+  entities: ["Feature", "Bug", "Test", "CodeReview"],
+  
+  // Relationships
+  relationships: [
+    { from: "Feature", type: "implemented_by", to: "CodeReview" },
+    { from: "Bug", type: "tests", to: "Test" },
+    { from: "Test", type: "validates", to: "Feature" }
+  ],
+  
+  // Agents can add to vocabulary
+  addEntity: (entity) => vocabulary.entities.push(entity),
+  addRelationship: (rel) => vocabulary.relationships.push(rel)
+};
+```
+
+## The Meta-Cortex Concept: Agent-to-Agent Communication
+
+The **meta-cortex** is a conceptual pattern where agents share a communication layer — a way for them to coordinate without direct intervention.
+
+### Meta-Cortex Architecture
+
+```javascript
+// The meta-cortex is a shared communication layer
+class MetaCortex {
+  constructor() {
+    this.messageBus = [];
+    this.sharedState = {};
+    this.agents = new Map();
+  }
+  
+  // Register an agent
+  register(agent) {
+    this.agents.set(agent.id, {
+      agent,
+      subscriptions: [],
+      lastSeen: Date.now()
+    });
+  }
+  
+  // Agent publishes to shared layer
+  async publish(agent, message) {
+    const entry = {
+      from: agent.id,
+      type: message.type,  // "finding", "request", "decision"
+      content: message.content,
+      timestamp: Date.now()
+    };
+    
+    this.messageBus.push(entry);
+    
+    // Notify subscribers
+    for (const subscriber of this.agents.values()) {
+      if (subscriber.subscriptions.includes(message.type)) {
+        await this.notify(subscriber.agent, entry);
+      }
+    }
+  }
+  
+  // Agent subscribes to message types
+  subscribe(agent, messageTypes) {
+    const record = this.agents.get(agent.id);
+    record.subscriptions.push(...messageTypes);
+  }
+  
+  // Query shared state
+  query(key) {
+    return this.sharedState[key];
+  }
+  
+  // Update shared state
+  update(key, value) {
+    this.sharedState[key] = value;
+  }
+}
+```
+
+### Communication Patterns
+
+```javascript
+// Pattern 1: Finding
+agentA.publish({
+  type: "finding",
+  content: "Found memory leak in auth module"
+});
+
+// Pattern 2: Request
+agentB.publish({
+  type: "request",
+  content: "Need database schema for user table"
+});
+
+// Pattern 3: Decision
+agentC.publish({
+  type: "decision",
+  content: "Using JWT tokens, not sessions"
+});
+
+// Pattern 4: Confirmation
+agentA.publish({
+  type: "confirmation",
+  content: "Memory leak fixed, tests passing"
+});
+```
+
+### Why Meta-Cortex Matters
+
+1. **Coordination without orchestration**: Agents coordinate themselves
+2. **Audit trail**: All communications logged
+3. **Shared state**: Agents agree on common facts
+4. **Decentralized**: No single point of failure
+
+## Summary: Multi-Agent Context
+
+Multi-agent systems require explicit context management:
+
+1. **Sub-agent orchestration**: Sequential, parallel, hierarchical patterns
+2. **Session persistence**: Working, session, long-term, shared memory
+3. **Isolation vs sharing**: Tradeoffs between focus and efficiency
+4. **Knowledge graph integration**: Shared semantic backbone
+5. **Meta-cortex**: Agent-to-agent communication layer
+
+These patterns enable AI systems to scale beyond single agents while maintaining coherence.
+
+## Key Sources
+
+- Claude Code sub-agent documentation
+- Terraphim knowledge graph implementation
+- Multi-agent orchestration patterns
+- Meta-cortex conceptual model from context engineering research

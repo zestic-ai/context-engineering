@@ -1,0 +1,406 @@
+# Chapter 16: Hooks and Automation for Context
+
+In the previous chapter, we saw how multi-agent systems coordinate. Now we address **hooks** — the automation layer that intercepts and processes AI interactions in real-time.
+
+Hooks are functions that run at specific points in the AI's execution: before a tool is used, after a response is generated, when a session starts. They enable validation, logging, correction, and continuous learning.
+
+## Session Hooks: Before/After LLM Calls
+
+Session hooks run around every LLM interaction, enabling preprocessing and postprocessing.
+
+### Before LLM Hook
+
+```javascript
+// Pre-process: validate and augment input
+async function beforeLLMHook(context) {
+  // 1. Check token budget
+  const budget = getTokenBudget();
+  if (budget.remaining < MIN_TOKENS) {
+    await compressContext();
+  }
+  
+  // 2. Add relevant context
+  const relevant = await retrieveRelevantContext(context.query);
+  context.prompt = augmentPrompt(context.prompt, relevant);
+  
+  // 3. Validate input
+  const validation = validateInput(context.prompt);
+  if (!validation.passed) {
+    throw new ValidationError(validation.errors);
+  }
+  
+  return context;
+}
+```
+
+### After LLM Hook
+
+```javascript
+// Post-process: validate and store output
+async function afterLLMHook(context, response) {
+  // 1. Validate output
+  const validation = validateOutput(response);
+  if (!validation.passed) {
+    // Retry or flag
+    await handleValidationFailure(validation.errors);
+  }
+  
+  // 2. Log interaction
+  await logInteraction({
+    query: context.query,
+    response: response.content,
+    tokens: response.usage,
+    duration: response.duration
+  });
+  
+  // 3. Update session memory
+  context.session.addTurn({
+    query: context.query,
+    response: response.content,
+    timestamp: Date.now()
+  });
+  
+  return response;
+}
+```
+
+### Hook Pipeline
+
+```javascript
+class HookPipeline {
+  constructor() {
+    this.beforeHooks = [];
+    this.afterHooks = [];
+  }
+  
+  addBeforeHook(hook) {
+    this.beforeHooks.push(hook);
+  }
+  
+  addAfterHook(hook) {
+    this.afterHooks.push(hook);
+  }
+  
+  async runBefore(context) {
+    for (const hook of this.beforeHooks) {
+      context = await hook(context);
+    }
+    return context;
+  }
+  
+  async runAfter(context, response) {
+    for (const hook of this.afterHooks) {
+      response = await hook(context, response);
+    }
+    return response;
+  }
+}
+```
+
+## Tool Use Hooks: Validation, Logging, Correction
+
+Tool use hooks intercept tool calls — validating, logging, or even correcting them.
+
+### Pre-Tool-Use Hook
+
+```javascript
+// Validate before executing a tool
+async function preToolUseHook(toolCall) {
+  // 1. Validate arguments
+  const validation = validateToolArgs(toolCall.name, toolCall.args);
+  if (!validation.valid) {
+    throw new ToolValidationError(validation.errors);
+  }
+  
+  // 2. Check permissions
+  const allowed = checkPermissions(toolCall.name, toolCall.args);
+  if (!allowed) {
+    throw new PermissionError(toolCall.name);
+  }
+  
+  // 3. Log the call
+  await logToolCall(toolCall);
+  
+  return toolCall;
+}
+```
+
+### Post-Tool-Use Hook
+
+```javascript
+// Process tool results
+async function postToolUseHook(toolCall, result) {
+  // 1. Validate result
+  const validation = validateToolResult(toolCall.name, result);
+  if (!validation.valid) {
+    // Correct if possible
+    await attemptCorrection(toolCall, result);
+  }
+  
+  // 2. Log result
+  await logToolResult(toolCall, result);
+  
+  // 3. Check for sensitive data
+  if (containsSensitiveData(result)) {
+    await redact(result);
+  }
+  
+  return result;
+}
+```
+
+### Example: File Edit Validation
+
+```javascript
+// Pre-hook for file edits
+async function preEditFileHook(toolCall) {
+  const { path, oldString, newString } = toolCall.args;
+  
+  // Check file exists
+  if (!await exists(path)) {
+    throw new Error(`File not found: ${path}`);
+  }
+  
+  // Check file is not protected
+  const protected = [".env", "secrets.yaml", "credentials.json"];
+  if (protected.some(p => path.endsWith(p))) {
+    throw new Error(`Cannot edit protected file: ${path}`);
+  }
+  
+  // Check oldString matches actual content
+  const content = await readFile(path);
+  if (!content.includes(oldString)) {
+    throw new Error("oldString does not match file content");
+  }
+  
+  return toolCall;
+}
+```
+
+## Claude Code Hooks: mcp-hook, pre-tool-use, post-tool-use
+
+Claude Code provides built-in hook points:
+
+### MCP Hook (Model Context Protocol)
+
+```yaml
+# .claude/hooks/mcp-hook
+- name: knowledge-graph
+  trigger: ".*"
+  action: |
+    # Query knowledge graph for relevant context
+    RESULT=$(terraphim-agent query "$CLAUDEUDE" --role engineer)
+    if [ -n "$RESULT" ]; then
+      echo "--- Knowledge Graph Context ---"
+      echo "$RESULT"
+    fi
+```
+
+### Pre-Tool-Use Hook
+
+```javascript
+// In claude_settings.json
+{
+  "hooks": {
+    "pre-tool-use": [
+      {
+        "match": "bash",
+        "action": "inspect",
+        "description": "Validate bash commands before execution"
+      }
+    ]
+  }
+}
+```
+
+### Post-Tool-Use Hook
+
+```javascript
+// Post-tool-use hook example
+{
+  "hooks": {
+    "post-tool-use": [
+      {
+        "match": "write",
+        "action": "lint",
+        "description": "Lint written files for syntax errors"
+      }
+    ]
+  }
+}
+```
+
+### Hook Configuration
+
+```yaml
+# Complete hook configuration
+hooks:
+  pre_tool_use:
+    - name: validate_bash
+      match: bash
+      action: validate
+      config:
+        allowed_commands: ["npm", "git", "docker"]
+        timeout: 300
+        
+    - name: validate_file_edit
+      match: edit
+      action: validate
+      config:
+        protected_files: [".env", "secrets/*"]
+        
+  post_tool_use:
+    - name: lint_code
+      match: write
+      action: lint
+      
+    - name: log_changes
+      match: ".*"
+      action: log
+```
+
+## Continuous Learning from Agent Interactions
+
+Hooks can enable **continuous learning** — improving the AI system based on interactions.
+
+### Learning Hook
+
+```javascript
+// Extract learnings from interactions
+async function learningHook(context, response) {
+  const learnings = [];
+  
+  // 1. What worked?
+  if (response.quality === "high") {
+    learnings.push({
+      type: "success_pattern",
+      pattern: extractPattern(context, response),
+      confidence: 0.9
+    });
+  }
+  
+  // 2. What failed?
+  if (response.errors && response.errors.length > 0) {
+    learnings.push({
+      type: "failure_pattern",
+      pattern: extractPattern(context, response),
+      errors: response.errors,
+      confidence: 0.8
+    });
+  }
+  
+  // 3. Store learnings
+  for (const learning of learnings) {
+    await storeLearning(learning);
+  }
+  
+  return response;
+}
+
+// Store in knowledge graph
+async function storeLearning(learning) {
+  const node = {
+    type: learning.type,
+    pattern: learning.pattern,
+    confidence: learning.confidence,
+    timestamp: Date.now()
+  };
+  
+  await knowledgeGraph.add(node);
+  await knowledgeGraph.connect(node, "derived_from", learning.context);
+}
+```
+
+### Pattern Extraction
+
+```javascript
+// Extract reusable patterns
+function extractPattern(context, response) {
+  return {
+    // What type of task?
+    taskType: classifyTask(context.query),
+    
+    // What approach worked?
+    approach: extractApproach(context.steps),
+    
+    // What context was needed?
+    contextNeeded: identifyContextUsed(context),
+    
+    // What tools were used?
+    toolsUsed: extractTools(response.toolCalls)
+  };
+}
+```
+
+## Building the Hook Taxonomy
+
+Organize hooks into a **taxonomy** for maintainability:
+
+### Hook Categories
+
+| Category | Purpose | Examples |
+|----------|---------|----------|
+| **Validation** | Check inputs/outputs | input validation, output validation |
+| **Security** | Protect system | permission check, redaction |
+| **Logging** | Record activity | audit log, metrics |
+| **Transformation** | Modify data | augmentation, correction |
+| **Learning** | Improve system | pattern extraction, knowledge update |
+
+### Hook Metadata
+
+```yaml
+# Hook registry
+hooks:
+  - id: "validate-input"
+    category: "validation"
+    trigger: "before_llm"
+    priority: 100  # Runs first
+    enabled: true
+    
+  - id: "log-interaction"
+    category: "logging"
+    trigger: "after_llm"
+    priority: 50
+    enabled: true
+    
+  - id: "extract-learnings"
+    category: "learning"
+    trigger: "after_llm"
+    priority: 10  # Runs last
+    enabled: true
+```
+
+### Hook Testing
+
+```javascript
+// Test hooks in isolation
+async function testHook(hook, input) {
+  const context = createContext(input);
+  
+  try {
+    const result = await hook(context);
+    return { passed: true, result };
+  } catch (error) {
+    return { passed: false, error: error.message };
+  }
+}
+```
+
+## Summary: Automation Layer
+
+Hooks provide the automation layer for context management:
+
+1. **Session hooks**: Before/after LLM calls for preprocessing and postprocessing
+2. **Tool use hooks**: Validate, log, and correct tool interactions
+3. **Claude Code hooks**: Built-in hook points (mcp-hook, pre/post-tool-use)
+4. **Continuous learning**: Extract and store learnings from interactions
+5. **Hook taxonomy**: Organize hooks by category with metadata
+
+Hooks transform AI systems from passive responders to active, self-improving systems.
+
+## Key Sources
+
+- Claude Code hooks documentation
+- MCP (Model Context Protocol) specification
+- Tool use validation patterns
+- Continuous learning in AI systems
