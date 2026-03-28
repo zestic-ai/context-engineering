@@ -1,0 +1,328 @@
+# Chapter 11: Compression Strategies
+
+In the previous chapter, we established token budget architecture. Now we address the critical question: **when the budget is exceeded, what do we compress?**
+
+This chapter presents compression strategies in priority order — applied systematically to minimize context loss while staying under budget.
+
+## The Compression Priority Order
+
+Not all compression is equal. Some strategies preserve more value than others. Here's the priority order:
+
+| Priority | Strategy | Token Savings | Value Preserved |
+|----------|----------|---------------|-----------------|
+| 1 | Deduplication | Low | High |
+| 2 | Summarization | Medium | Medium |
+| 3 | Truncation | High | Medium |
+| 4 | Drop (LRU) | Highest | Low |
+
+### 1. Deduplication: Remove Identical Content Across Skills
+
+**Deduplication** removes duplicate content that appears in multiple skills. This is the safest compression — you lose nothing meaningful.
+
+#### What Gets Deduped
+
+- **Shared examples**: If two skills both include "How to use `ls -la`", keep one
+- **Common troubleshooting**: Error handling patterns that repeat
+- **Boilerplate**: Identical descriptions across skills
+
+```javascript
+function deduplicate(skillContents) {
+  const seen = new Map();
+  const unique = [];
+  
+  for (const skill of skillContents) {
+    const hash = hashContent(skill.content);
+    
+    if (seen.has(hash)) {
+      // Reference existing, don't duplicate
+      skill.references = [seen.get(hash).skillName];
+    } else {
+      seen.set(hash, { skillName: skill.name, content: skill.content });
+      unique.push(skill);
+    }
+  }
+  
+  return unique;
+}
+```
+
+#### Token Savings
+
+Typically saves 5-15% of total token count. Low impact, but easy wins.
+
+### 2. Summarization: Condense Examples, Troubleshooting, Verbose Explanations
+
+**Summarization** replaces detailed content with shorter summaries while preserving key information.
+
+#### What Gets Summarized
+
+- **Examples**: Full examples → summaries of what they demonstrate
+- **Troubleshooting**: Step-by-step guides → summary + reference link
+- **Verbose explanations**: Detailed prose → bullet points
+- **Edge cases**: Long lists of rare cases → top 3 + reference
+
+```javascript
+function summarize(skill, options) {
+  const sections = skill.split('\n## ');
+  
+  const summarized = sections.map(section => {
+    // If section is long (>500 chars), summarize
+    if (section.length > 500 && !isCoreSection(section)) {
+      return summarizeSection(section);
+    }
+    return section;
+  });
+  
+  return summarized.join('\n## ');
+}
+
+function summarizeSection(section) {
+  // Extract key points using LLM or heuristics
+  const lines = section.split('\n').filter(l => l.trim());
+  
+  if (lines.length > 5) {
+    // Keep first 2 lines (intro), summarize rest
+    return [
+      lines[0],  // Section header
+      lines[1],  // First important point
+      "... (see full documentation for complete details)",
+    ].join('\n');
+  }
+  
+  return section;
+}
+```
+
+#### Token Savings
+
+Typically saves 30-50% of summarized sections. Good impact with moderate value loss.
+
+### 3. Truncation: Cut from Oldest Non-Constitutional Content
+
+**Truncation** removes the oldest parts of non-constitutional context when space is needed.
+
+#### What Gets Truncated (In Priority Order)
+
+1. **Oldest conversation turns**: Keep the last N turns, drop older
+2. **Least relevant file reads**: If 20 files were read, keep 10 most relevant
+3. **Historical decisions**: Keep current state, drop how you got there
+
+```javascript
+function truncate(context, maxTokens) {
+  const current = context.constitutional + context.activeSkills;
+  const available = maxTokens - current;
+  
+  // Truncate memory (oldest first)
+  let memoryTokens = 0;
+  const truncatedMemory = [];
+  
+  for (const turn of context.memory) {
+    if (memoryTokens + turn.tokens <= available) {
+      truncatedMemory.push(turn);
+      memoryTokens += turn.tokens;
+    }
+    // If we run out of space, stop adding
+  }
+  
+  return {
+    ...context,
+    memory: truncatedMemory,
+    memoryTokens
+  };
+}
+```
+
+#### Token Savings
+
+Variable, depending on how much history exists. Can save 50%+ when history is long.
+
+### 4. Drop: LRU Eviction of Inactive Skills
+
+**Drop** is the last resort — completely removing inactive skills from context. Uses **LRU (Least Recently Used)** eviction.
+
+#### The LRU Pattern
+
+```javascript
+function lruEviction(skills, maxSkills = 5) {
+  // Sort by last use time
+  const sorted = skills.sort((a, b) => a.lastUsed - b.lastUsed);
+  
+  // Drop least recently used until under limit
+  const active = [];
+  for (const skill of sorted) {
+    if (active.length < maxSkills) {
+      active.push(skill);
+    }
+  }
+  
+  return active;
+}
+```
+
+#### When to Drop
+
+- **10 turns of non-use**: If a skill hasn't been used in 10 conversation turns, drop it
+- **Below relevance threshold**: If a skill's relevance score drops below 0.3
+- **Emergency**: If context is critically over budget
+
+```javascript
+// Auto-deactivation rules
+const autoDrop = skills.filter(s => 
+  s.turnsSinceLastUse > 10 || s.relevance < 0.3
+);
+```
+
+#### Token Savings
+
+Saves 1000-2000 tokens per dropped skill. Highest savings, but highest value loss.
+
+## Building a Compression Pipeline
+
+A production system implements compression as a **pipeline** that runs before each LLM call:
+
+```javascript
+async function compressPipeline(context, budget) {
+  // Step 1: Check if we need compression
+  if (context.totalTokens <= budget) {
+    return context;
+  }
+  
+  // Step 2: Deduplication (always safe)
+  let compressed = deduplicate(context);
+  
+  // Step 3: If still over budget, summarize
+  if (compressed.totalTokens > budget) {
+    compressed = summarize(compressed);
+  }
+  
+  // Step 4: If still over budget, truncate memory
+  if (compressed.totalTokens > budget) {
+    compressed = truncate(compressed, budget);
+  }
+  
+  // Step 5: If still over budget, drop inactive skills
+  if (compressed.totalTokens > budget) {
+    compressed = lruEviction(compressed.skills);
+  }
+  
+  // Final check: if still over, something is wrong
+  if (compressed.totalTokens > budget) {
+    throw new Error(`Compression failed: ${compressed.totalTokens} > ${budget}`);
+  }
+  
+  return compressed;
+}
+```
+
+### The Compression Report
+
+After compression, generate a report for debugging:
+
+```javascript
+const report = {
+  originalTokens: 15000,
+  budget: 12000,
+  afterDeduplication: 14000,  // -1000
+  afterSummarization: 11000,   // -3000
+  afterTruncation: 10500,      // -500
+  afterLRU: 10000,             // -500
+  strategiesApplied: ['deduplicate', 'summarize', 'truncate', 'lru'],
+  droppedSkills: ['unused-skill'],
+  timestamp: new Date().toISOString()
+};
+```
+
+## When to Compress: Pre-LLM vs Post-LLM
+
+Compression can happen at different points in the pipeline:
+
+### Pre-LLM Compression
+
+Compress **before** sending to the LLM:
+
+```javascript
+async function query(userQuery) {
+  const context = buildContext(userQuery);
+  const compressed = await compressPipeline(context, BUDGET);
+  
+  const response = await llm.generate({
+    prompt: compressed,
+    ...
+  });
+  
+  return response;
+}
+```
+
+**Pros:**
+- Always within budget
+- Predictable LLM input size
+- LLM sees consistent format
+
+**Cons:**
+- May lose important context
+- Compression is guesswork
+
+### Post-LLM Compression
+
+Compress **after** receiving from LLM to save on response processing:
+
+```javascript
+async function query(userQuery) {
+  const context = buildContext(userQuery);
+  
+  // Use larger context for LLM
+  const response = await llm.generate({
+    prompt: context,  // Full context
+    maxTokens: 4000    // Compress output
+  });
+  
+  // Compress response if needed for next turn
+  context.addResponse(response);
+  context.compressForNextTurn();
+  
+  return response;
+}
+```
+
+**Pros:**
+- LLM has maximum context for best response
+- Compression is more accurate (we know what was used)
+
+**Cons:**
+- LLM may hit token limits
+- Less predictable costs
+
+### Hybrid Approach
+
+Most systems use **hybrid**:
+
+1. **Pre-LLM**: Moderate compression (budget × 0.9)
+2. **Post-LLM**: Additional compression for context retention
+
+```javascript
+const BUDGET = 12000;
+const PRE_LLM_BUDGET = BUDGET * 0.9;  // 10,800
+const POST_LLM_BUDGET = BUDGET;        // 12,000
+```
+
+This gives the LLM room while maintaining budget discipline.
+
+## Summary: Systematic Compression
+
+Compression strategies must be systematic, not ad-hoc:
+
+1. **Priority order**: Deduplicate → Summarize → Truncate → Drop
+2. **Pipeline**: Apply strategies sequentially until under budget
+3. **Never touch constitutional**: Identity context is locked
+4. **Report**: Log what was compressed and why
+5. **Hybrid**: Pre-LLM for discipline, post-LLM for flexibility
+
+The next chapter shows how to design skills to work with this compression system.
+
+## Key Sources
+
+- Context Optimizer skill implementation
+- Claude Code compression patterns
+- LLM context window management best practices
+- Token optimization techniques from production systems
