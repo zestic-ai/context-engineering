@@ -1,0 +1,233 @@
+# Chapter 10: Token Budget Architecture
+
+In the previous chapter, we saw how knowledge graphs provide precise, grounded context. But there's a fundamental constraint: **the context window is finite**. Every LLM has a maximum number of tokens it can process, and exceeding that limit causes failures.
+
+This chapter introduces **token budget architecture** — a systematic approach to managing context within limits while preserving what matters most.
+
+## The 12,000 Token Rule and Progressive Disclosure
+
+A practical rule of thumb: **allocate no more than 12,000 tokens for active context** (out of typical 128K-200K windows). This leaves headroom for the LLM's output and system overhead.
+
+But this raises a challenge: how do you fit everything you need into 12K tokens while maintaining quality?
+
+### The Problem: Flat Context Loading
+
+Traditional approaches load everything at once:
+
+- All skills: 50+ skills × ~1000 tokens each = 50,000+ tokens
+- All memory: Every conversation, every file read = unbounded
+- All knowledge: The entire knowledge graph context = massive
+
+This exceeds limits immediately, and naive truncation loses critical information.
+
+### The Solution: Progressive Disclosure
+
+**Progressive disclosure** is a design pattern from UI design: show only what's needed at each moment, reveal more on demand.
+
+Applied to context:
+
+1. **Startup**: Load only skill names (~50 tokens)
+2. **On trigger**: Load full skill content (~1000 tokens per skill)
+3. **On compression**: Reduce to essentials before LLM call (~2000 tokens per skill)
+4. **On demand**: Load additional context when specifically requested
+
+This keeps active context under the budget while preserving access to everything.
+
+## Constitutional Context: What Never Gets Compressed
+
+Not all context is equal. Some things must **never be compressed or dropped** — they form the "constitution" of the AI system.
+
+### Core Constitutional Files
+
+| File | Purpose | Never Drop |
+|------|---------|------------|
+| **AGENTS.md** | Identity, values, operating principles | ✓ |
+| **SOUL.md** | Core persona and personality | ✓ |
+| **USER.md** | User preferences, context | ✓ |
+| **HEARTBEAT.md** | Autonomous loop instructions | ✓ |
+
+These define *who the AI is*. Without them, the system loses its identity.
+
+### Constitutional Principles
+
+1. **Identity preservation**: The AI must remain itself
+2. **User continuity**: Must remember who it's helping
+3. **Operational capability**: Must know how to function (heartbeat, skills)
+
+These are non-negotiable. Even in tight budget situations, constitutional context is locked.
+
+## Layered Loading: Skill Catalog → Full SKILL.md → Compression
+
+The context optimizer implements a **three-layer architecture**:
+
+### Layer 1: Skill Catalog (Names Only)
+
+At startup, load only skill names and triggers:
+
+```yaml
+# Skill catalog: ~50 tokens for 20 skills
+skills:
+  web-search:
+    name: web-search
+    triggers: ["search", "web", "find", "lookup"]
+    tier: standard
+    estimated_tokens: 800
+    
+  terraphim-memory:
+    name: terraphim-memory
+    triggers: ["memory", "recall", "remember", "kg"]
+    tier: core
+    estimated_tokens: 1200
+```
+
+**Token cost**: ~50 tokens total (vs ~16,000 for full content)
+
+### Layer 2: Active Skills (Full Content)
+
+When a skill is triggered, load its full content:
+
+```javascript
+// Activation decision
+const activeSkills = skills.filter(s => 
+  s.triggers.some(t => userQuery.toLowerCase().includes(t))
+);
+
+// Load full content only for activated skills
+const skillContents = await Promise.all(
+  activeSkills.map(s => readFile(`skills/${s.name}/SKILL.md`))
+);
+```
+
+**Token cost**: ~1000-2000 tokens per active skill
+
+### Layer 3: Compression (Before LLM)
+
+Before calling the LLM, compress all active skills:
+
+```javascript
+function compressContext(skillContents, maxTokens) {
+  // Priority: core skills first, then standard
+  const sorted = sortByPriority(skillContents);
+  
+  let totalTokens = 0;
+  const compressed = [];
+  
+  for (const skill of sorted) {
+    if (totalTokens + skill.compressed_tokens <= maxTokens) {
+      compressed.push(skill.compressed);
+      totalTokens += skill.compressed_tokens;
+    }
+  }
+  
+  return compressed;
+}
+```
+
+## Token Tracking and Monitoring Systems
+
+Managing a token budget requires **visibility** into what's consuming tokens.
+
+### The Token Tracker
+
+A tracking system monitors context composition:
+
+```javascript
+const tokenTracker = {
+  constitutional: 0,
+  skillCatalog: 0,
+  activeSkills: 0,
+  memory: 0,
+  working: 0,
+  buffer: 0,
+  
+  get total() {
+    return Object.values(this).reduce((a, b) => a + b, 0);
+  },
+  
+  warnAt: 12000,
+  criticalAt: 15000,
+  
+  check() {
+    if (this.total > this.criticalAt) {
+      triggerCompression();
+    }
+  }
+};
+```
+
+### Monitoring Dashboard
+
+Key metrics to track:
+
+- **Total context size**: Should stay under 12K
+- **Active skill count**: Should not exceed 5 simultaneous
+- **Memory age**: How old is the conversation history?
+- **Buffer remaining**: What's left for this response?
+
+### Alerting
+
+```javascript
+// Alert when approaching budget
+if (tokenTracker.total > tokenTracker.warnAt) {
+  notify("Approaching token budget", "yellow");
+}
+
+if (tokenTracker.total > tokenTracker.criticalAt) {
+  notify("CRITICAL: Triggering emergency compression", "red");
+  triggerCompression();
+}
+```
+
+## Allocation Per Context Type: The Budget Breakdown
+
+A well-designed token budget allocates tokens explicitly:
+
+### Recommended Allocation (12,000 Token Budget)
+
+| Context Type | Allocation | Purpose |
+|-------------|------------|---------|
+| **Constitutional** | 2,000 | AGENTS.md, SOUL.md, USER.md (never compressed) |
+| **Skill Catalog** | 100 | Just names, triggers |
+| **Active Skills** | 5,000 | 2-3 skills fully loaded (~1500-2000 each) |
+| **Memory** | 2,000 | Recent conversation, key facts |
+| **Working** | 2,000 | Current task context, file state |
+| **Buffer** | 900 | Flexibility for response |
+
+### Why This Works
+
+- **Constitutional preserved**: Identity and user context never lost
+- **Skills targeted**: Only relevant skills load
+- **Memory managed**: Recent context prioritized
+- **Working flexible**: Current task gets what it needs
+- **Buffer maintained**: Room for LLM response
+
+### Adjusting for Different Models
+
+| Model | Window | Recommended Budget | Constitutional |
+|-------|--------|-------------------|---------------|
+| GPT-4 | 128K | 15,000 | 3,000 |
+| Claude 3 | 200K | 20,000 | 3,000 |
+| GPT-4 Turbo | 128K | 12,000 | 2,000 |
+| Claude 3 Haiku | 200K | 15,000 | 2,000 |
+
+The budget scales with window size, but constitutional stays constant.
+
+## Summary: Budget as Infrastructure
+
+Token budget architecture transforms context from an unbounded problem to a managed one:
+
+1. **12,000 token rule**: Practical limit with headroom
+2. **Progressive disclosure**: Load only what's needed, when needed
+3. **Constitutional context**: Lock what must never be lost
+4. **Three-layer loading**: Catalog → Full → Compression
+5. **Token tracking**: Visibility into context composition
+6. **Explicit allocation**: Budget breakdown by type
+
+This is the foundation for context optimization. The next chapter shows how to implement compression strategies.
+
+## Key Sources
+
+- Context Optimizer skill implementation (cto-executive-system)
+- Claude Code context architecture
+- OpenClaw context management
+- LLM context window specifications (OpenAI, Anthropic)
