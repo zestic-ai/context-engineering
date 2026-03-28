@@ -170,7 +170,7 @@ This is why the "configuration manager AI agent" concept is powerful: it manages
 
 ## Concept Modelling Fundamentals
 
-As we close this chapter, we return to the concept modelling that was introduced in Chapter 1. Now we can make it more precise.
+As we close this chapter, we return to the concept modelling that was introduced in Chapter 1. Now we can make it more precise. (See also Chapter 8 for the practical application.)
 
 ### Entity Types
 

@@ -340,7 +340,7 @@ This enables searching across all research documents using any synonym.
 
 ## Concept Modelling in Practice: From Domain Model to KG Schema
 
-Recall from Chapter 1 and Chapter 4 the concept modelling fundamentals. Now we apply them:
+Recall from Chapter 1 (the crash course on entities, relationships, constraints) and Chapter 4 (entity types, relationship cardinalities, invariants). Now we apply them:
 
 ### Step 1: Define Entities
 

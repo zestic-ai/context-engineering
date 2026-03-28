@@ -124,6 +124,8 @@ A **constraint** is a rule that limits how entities and relationships can be com
 
 Constraints are the safety gates. Without explicit constraints, the AI system can generate semantically valid but practically dangerous outputs—like recommending 800mg when 80mg is safe.
 
+**These fundamentals are applied in Chapter 8**, where we build a knowledge graph using exactly these concepts: entities from the domain model, relationships between them, and constraints that the AI must respect.
+
 ## Summary: The New Failure Landscape
 
 AI software fails differently because:
