@@ -10,8 +10,8 @@ metadata:
   stage: draft
   version: "0.1.0"
   last_updated: "2026-03-28"
-  word_count_approx: 22000
-  chapters_complete: 11
+  word_count_approx: 26000
+  chapters_complete: 12
   chapters_total: 22
   appendices_planned: 7
   review_status: "Self-reviewed, peer review pending"
@@ -68,16 +68,6 @@ book:
     - chapters/10-token-budget-architecture.qmd
     - chapters/11-compression-strategies.qmd
     - chapters/12-skill-architecture-for-ai-agents.qmd
-    - chapters/13-claude.md-and-project-wide-rules.qmd
-    - chapters/14-validation-and-quality-gates.qmd
-    - chapters/15-multi-agent-context-management.qmd
-    - chapters/16-hooks-and-automation-for-context.qmd
-    - chapters/17-the-openclaw-context-system.qmd
-    - chapters/18-enterprise-context-governance.qmd
-    - chapters/19-hybrid-pipeline-patterns.qmd
-    - chapters/20-building-a-context-engineering-practice.qmd
-    - chapters/21-the-knowledge-graph-market-landscape.qmd
-    - chapters/22-open-problems-and-research-directions.qmd
     - appendix/appendix-a.qmd
     - appendix/appendix-b.qmd
     - appendix/appendix-c.qmd
