@@ -1,15 +1,184 @@
-# Chapter 6: Building a Knowledge Graph for Context
+# Chapter 6: Deterministic Search vs Vector Embeddings
 
-*TODO: Write content*
+In the previous chapter, we established that knowledge graphs provide a powerful way to structure context. Now we must address a critical architectural decision: how do we query that knowledge graph?
 
-## Chapter Outline
+The two dominant approaches are **deterministic search** (pattern matching against known vocabulary) and **vector embeddings** (similarity search in high-dimensional space). This chapter provides an honest comparison, drawing from real-world experience and research.
 
-- TODO: Add outline items
+## How Vector Embeddings Work
 
-## Key Points to Cover
+Vector embeddings represent text as **vectors** (arrays of numbers) in a high-dimensional space. The key idea is that similar texts should have similar vectors — their positions should be close to each other in the vector space.
 
-1. TODO: Add key points
+### The Process
 
-## Sources
+1. **Encoding**: A model (BERT, OpenAI's text-embedding-3, etc.) converts text into a vector, typically 384 to 1536 dimensions
+2. **Indexing**: The vectors are stored in a vector database (Pinecone, Weaviate, Chroma, Milvus)
+3. **Querying**: When you ask a question, your query is also encoded into a vector
+4. **Similarity Search**: The database finds the stored vectors that are most similar to your query vector
 
-- TODO: Add sources
+```
+Query: "What drugs treat migraines?"
+↓ [encode with embedding model]
+Query vector: [0.12, -0.34, 0.78, ...] (1536 dimensions)
+↓ [cosine similarity search]
+Top matches: documents with vectors close to query vector
+```
+
+### The Embedding Problem
+
+The critical insight is that **embeddings are probabilistic approximations, not deterministic mappings**. The model has learned statistical patterns from training data, but it does not "know" that Drug A treats Disease B. It knows that texts about Drug A and texts about Disease B tend to appear in similar contexts.
+
+This creates several problems:
+
+**Information loss in compression**: A knowledge graph with 1,000 nodes and complex relationships is compressed into a 128-dimensional or 256-dimensional vector. The relationship structure is lost. Only statistical co-occurrence patterns remain.
+
+**No explainability**: When a vector search returns results, you get a similarity score. But you cannot explain *why* a document matched. "The cosine similarity was 0.87" is not a satisfying answer when someone asks "why did you recommend this?"
+
+**Probabilistic, not deterministic**: Run the same query twice and you might get different results (if the index changes, if the model updates, if there's any randomness in the pipeline). This is problematic for testing, auditing, and reliability.
+
+**The Cleora problem**: Cleora and similar graph embedding systems attempt to preserve graph structure in vectors. But they face an inherent trade-off: you cannot perfectly preserve a complex graph (thousands of nodes, millions of relationships) in a low-dimensional vector without massive information loss. The compression is lossy, not lossless.
+
+### The Cost of Probabilistic Search
+
+Vector search has real costs that accumulate at scale:
+
+- **Latency**: 1-3 seconds per query (encode + vector search + retrieval)
+- **Memory**: 500MB-10GB for the vector index
+- **Compute**: Requires GPU or high-CPU instances for large indexes
+- **API costs**: Embedding models charge per 1K tokens
+- **Cold start**: Seconds to load the model and index
+
+At scale (millions of queries per day), these costs become significant. A healthcare system processing 1M queries/day at $0.001/query = $1,000/day in just embedding costs.
+
+## The Deterministic Alternative
+
+**Deterministic search** takes a different approach: pattern matching against a known vocabulary using automata.
+
+Instead of converting text to vectors, the system:
+
+1. **Builds an automaton**: Compiles a vocabulary of terms (1.4M+ patterns) into an efficient finite-state machine (Aho-Corasick)
+2. **Scans input**: When you provide text or a query, the automaton scans for matches
+3. **Ranks results**: Matches are ranked by connectivity in the knowledge graph
+
+```
+Query: "What drugs treat migraines?"
+↓ [Aho-Corasick automaton scan]
+Matched terms: "migraine" (disease), "propranolol" (drug)
+↓ [knowledge graph traversal]
+Drug treats Disease: Propranolol -treats-> Migraine
+↓ [return result]
+Propranolol is indicated for migraine prophylaxis
+```
+
+### Key Characteristics
+
+**100% accuracy for known terms**: If "migraine" is in your vocabulary, the system finds it. Every time. No false negatives from embedding drift.
+
+**Explainable**: You can trace exactly why a document matched — which term, at which position, linked to which relationship. This is critical for auditing.
+
+**Zero runtime cost**: The automata is compiled once and runs locally. No API calls, no per-query cost. At scale, this is transformative.
+
+**<200ms latency**: Even with 1.4M+ patterns, Aho-Corasick finds matches in <1ms. Search is effectively free — you can run it on every keystroke.
+
+**Information preserved**: The full graph structure is preserved. No lossy compression into vectors.
+
+## Head-to-Head Comparison
+
+| Dimension | Deterministic (Terraphim) | Embedding RAG |
+|-----------|--------------------------|---------------|
+| **Latency** | <200ms | 1-3s |
+| **Memory** | ~15MB | 500MB-10GB |
+| **Accuracy** | 100% for known terms | ~85-95% |
+| **Explainability** | Exact match trace | "Nearest neighbor" (opaque) |
+| **Privacy** | Fully local, no data leaves device | Often cloud-based |
+| **Cost** | Zero runtime | $0.01-0.10/query |
+| **Cold start** | Instantaneous | Seconds (load model) |
+| **Vocabulary** | Must be pre-defined | Handles unseen terms |
+| **Semantic understanding** | None (literal matching) | Strong |
+
+## Where Deterministic Wins
+
+### Healthcare and Safety-Critical Applications
+
+The MedGemma competition case study (from Chapter 5) demonstrates the stakes:
+
+- **Raw MedGemma**: Recommended Osimertinib **800mg** (10x overdose)
+- **With KG grounding**: Correctly outputs **80mg** per FLAURA trial
+
+In healthcare, "approximately correct" is not acceptable. A 10x dosage error can kill. Deterministic grounding is not optional — it's a safety gate.
+
+### Compliance and Audit
+
+When regulators ask "why did the system recommend X?", deterministic systems can answer:
+
+> "Term 'contraindicated' matched at position 247 in document 'drug-interactions.md', linked to drug 'Warfarin' via relationship 'contraindicated_for', which triggers the warning you received."
+
+Embedding-based systems can only say:
+
+> "The cosine similarity between your query and this document chunk was 0.87."
+
+One of these answers satisfies an auditor. The other does not.
+
+### High-Throughput, Low-Latency
+
+Terraphim processes 1.4M SNOMED patterns in <1ms. A time-agent categorizes activities in <1ms. At these speeds, search is effectively free — it can run on every keystroke, every webhook, every event.
+
+For applications where latency matters (real-time systems, interactive UIs, edge devices), deterministic search is the only viable option.
+
+### Edge and Offline
+
+The 15MB automata fits on any device:
+
+- Mobile phones (iOS, Android)
+- IoT devices
+- Browser-based (WASM)
+- Air-gapped systems
+
+No network required. No API calls. No token costs. This matters for privacy-sensitive applications and offline-first architectures.
+
+## Where Embedding RAG Wins
+
+Deterministic search is not a replacement for all AI search. Embedding-based RAG excels at:
+
+- **Open-ended questions**: "What are the implications of this contract clause?" requires semantic understanding beyond pattern matching
+- **Unseen content**: Documents not in the vocabulary need embedding-based retrieval
+- **Conversational search**: Multi-turn queries with context benefit from LLM comprehension
+- **Creative tasks**: Brainstorming, summarization, paraphrasing where semantic flexibility matters
+
+## The Hybrid Strategy
+
+The most effective architecture combines both approaches:
+
+1. **Deterministic layer** (first): Fast, exact, explainable. Handles known vocabulary, compliance terms, domain entities.
+2. **LLM layer** (fallback): Routes to appropriate model for open-ended queries that don't match known patterns.
+3. **Knowledge graph grounding gate**: LLM output is validated against the deterministic knowledge graph before reaching the user.
+
+This gives you:
+- Speed of deterministic search for 80% of queries
+- Semantic capability of LLM for the remaining 20%
+- Safety gate that prevents hallucinations from reaching production
+
+This hybrid approach is explored in detail in Chapter 19.
+
+## Summary: Two Tools, One Goal
+
+Both deterministic search and vector embeddings aim to connect queries to relevant knowledge. They take different approaches:
+
+| | Deterministic | Vector Embeddings |
+|---|---|---|
+| **Method** | Pattern matching | Similarity search |
+| **Precision** | Exact for known terms | Approximate |
+| **Explainability** | Full trace | Opaque similarity score |
+| **Cost** | Near zero | Per-query |
+| **Semantic range** | Limited to vocabulary | Handles open-ended |
+
+The choice depends on your requirements. For safety-critical, compliance-sensitive, high-throughput applications, deterministic wins. For creative, open-ended, exploratory tasks, embeddings win.
+
+Most production systems benefit from **both** — deterministic for the known, embeddings for the unknown, with a grounding gate to catch hallucinations.
+
+## Key Sources
+
+- Terraphim AI technical documentation and benchmarks
+- MedGemma competition results (543 tests, 18/18 grounded)
+- Zestic AI framework on deterministic vs embedding approaches
+- Knowledge-garden trend analysis: "Deterministic vs Embedding"
+- Aho-Corasick algorithm literature
