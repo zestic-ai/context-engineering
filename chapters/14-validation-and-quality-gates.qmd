@@ -1,0 +1,383 @@
+# Chapter 14: Validation and Quality Gates
+
+In the previous chapter, we saw how CLAUDE.md and project rules define expected behavior. Now we address how to **validate** that behavior — detecting errors, drift, and issues before they reach production.
+
+This chapter presents validation as a layered system: **pre-LLM validation** catches problems before the model runs, **post-LLM validation** checks its outputs, and **continuous monitoring** detects drift over time.
+
+## KLS (Knowledge Layer Schema) Validation Protocol
+
+**KLS** (Knowledge Layer Schema) is a structured validation protocol for AI-generated content. It provides a framework for reviewing, validating, and approving any significant AI output.
+
+### What KLS Validates
+
+KLS operates across multiple dimensions:
+
+| Dimension | What It Checks | Example |
+|-----------|---------------|---------|
+| **Conceptual** | Core claims, concepts, definitions | Are claims internally consistent? |
+| **Structural** | Organization, flow, completeness | Does it have all required sections? |
+| **Technical** | Code correctness, syntax | Does the code compile? |
+| **Semantic** | Grounding in knowledge base | Are facts verified? |
+| **Style** | Formatting, tone, length | Does it match style guide? |
+
+### KLS Schema Structure
+
+```yaml
+# KLS Validation Schema
+meta:
+  manuscript_title: "Context Engineering Book"
+  reviewer: { name: "Reviewer", role: "peer_reviewer" }
+  review_date: "2026-03-28"
+
+conceptual_model:
+  core_claim_one_sentence: "Context engineering is the missing discipline..."
+  concepts:
+    - id: "C1"
+      label: "Context Engineering"
+      definition: "The discipline of managing AI context..."
+      measurable_proxies: ["drift_detection_rate", "context_coverage"]
+
+relations:
+  - id: "R1"
+    type: "causal"
+    from: "C1"  # Context engineering
+    to: "C2"    # Reduced failures
+    statement: "Context engineering reduces AI failures"
+    confidence: 0.9
+
+validation_results:
+  syntax: { passed: true, errors: [] }
+  semantics: { passed: true, grounding: "verified" }
+  style: { passed: true, issues: [] }
+
+# Final verdict
+recommendation:
+  status: "approved"  # approved | needs_revision | rejected
+  confidence: 0.85
+  notes: "Strong conceptual model, minor style issues"
+```
+
+### KLS Workflow
+
+1. **Generate content**: LLM produces output
+2. **Run KLS validation**: Check against schema
+3. **Flag issues**: Identify problems
+4. **Iterate**: Fix and re-validate
+5. **Approve**: Mark as validated
+
+```javascript
+async function klsValidate(content, schema) {
+  const results = {
+    syntax: validateSyntax(content),
+    semantics: validateSemantics(content),
+    style: validateStyle(content),
+    grounding: validateGrounding(content)
+  };
+  
+  const passed = results.syntax.passed && 
+                results.semantics.passed && 
+                results.style.passed;
+  
+  return {
+    results,
+    passed,
+    recommendation: passed ? "approved" : "needs_revision"
+  };
+}
+```
+
+## Pre-LLM Validation Layers: Syntax, Semantics, Grounding
+
+Validation should happen **before** the LLM generates content — catching problems early is cheaper than fixing them later.
+
+### Layer 1: Syntax Validation
+
+Check that inputs are well-formed:
+
+```javascript
+function validateSyntax(input) {
+  const errors = [];
+  
+  // Check JSON validity
+  if (input.format === "json") {
+    try {
+      JSON.parse(input.content);
+    } catch (e) {
+      errors.push({ type: "JSON_SYNTAX", message: e.message });
+    }
+  }
+  
+  // Check required fields
+  for (const field of input.required_fields) {
+    if (!input.data[field]) {
+      errors.push({ type: "MISSING_FIELD", field });
+    }
+  }
+  
+  return { passed: errors.length === 0, errors };
+}
+```
+
+### Layer 2: Semantic Validation
+
+Check that inputs make sense:
+
+```javascript
+function validateSemantics(input) {
+  const warnings = [];
+  
+  // Check for contradictory requirements
+  if (input.requirements) {
+    const contradictions = findContradictions(input.requirements);
+    warnings.push(...contradictions);
+  }
+  
+  // Check for impossible constraints
+  if (input.constraints) {
+    const impossible = findImpossibleConstraints(input.constraints);
+    if (impossible.length > 0) {
+      warnings.push({ type: "IMPOSSIBLE", constraints: impossible });
+    }
+  }
+  
+  return { passed: warnings.length === 0, warnings };
+}
+```
+
+### Layer 3: Grounding Validation
+
+Check that inputs are grounded in known facts:
+
+```javascript
+function validateGrounding(input, knowledgeGraph) {
+  const ungrounded = [];
+  
+  // Extract entities from input
+  const entities = extractEntities(input.content);
+  
+  // Check each entity exists in knowledge graph
+  for (const entity of entities) {
+    if (!knowledgeGraph.has(entity)) {
+      ungrounded.push(entity);
+    }
+  }
+  
+  return { 
+    passed: ungrounded.length === 0, 
+    ungrounded,
+    coverage: (entities.length - ungrounded.length) / entities.length
+  };
+}
+```
+
+### The Validation Pipeline
+
+```javascript
+async function preLLMValidation(input, knowledgeGraph) {
+  const results = {
+    syntax: validateSyntax(input),
+    semantics: validateSemantics(input),
+    grounding: validateGrounding(input, knowledgeGraph)
+  };
+  
+  const allPassed = results.syntax.passed && 
+                    results.semantics.passed && 
+                    results.grounding.passed;
+  
+  if (!allPassed) {
+    // Don't call LLM - fix inputs first
+    throw new ValidationError(results);
+  }
+  
+  return results;
+}
+```
+
+## Drift Detection: Monitoring Context Changes Over Time
+
+**Context drift** is the gradual misalignment we discussed in Chapter 1. Drift detection monitors for this over time.
+
+### What Causes Drift
+
+- **Vocabulary drift**: Same terms mean different things
+- **Assumption drift**: Unstated assumptions change
+- **Relationship drift**: Entity relationships shift
+- **Goal drift**: Original objectives evolve
+
+### Drift Detection Metrics
+
+```javascript
+class DriftDetector {
+  constructor(baseline) {
+    this.baseline = baseline;
+    this.history = [];
+  }
+  
+  detectDrift(current) {
+    const metrics = {
+      vocabularyDrift: this.compareVocabulary(baseline, current),
+      assumptionDrift: this.compareAssumptions(baseline, current),
+      relationshipDrift: this.compareRelationships(baseline, current)
+    };
+    
+    const totalDrift = (
+      metrics.vocabularyDrift * 0.3 +
+      metrics.assumptionDrift * 0.3 +
+      metrics.relationshipDrift * 0.4
+    );
+    
+    return {
+      metrics,
+      totalDrift,
+      isCritical: totalDrift > 0.3,
+      recommendation: totalDrift > 0.3 ? "REBASELINE" : "MONITOR"
+    };
+  }
+  
+  compareVocabulary(baseline, current) {
+    const baselineTerms = new Set(baseline.vocabulary);
+    const currentTerms = new Set(current.vocabulary);
+    
+    const added = [...currentTerms].filter(t => !baselineTerms.has(t));
+    const removed = [...baselineTerms].filter(t => !currentTerms.has(t));
+    
+    return (added.length + removed.length) / baselineTerms.size;
+  }
+}
+```
+
+### Drift Alerts
+
+```javascript
+// Alert thresholds
+const DRIFT_WARNING = 0.15;  // 15% drift
+const DRIFT_CRITICAL = 0.30; // 30% drift
+
+// Monitor in production
+setInterval(() => {
+  const drift = detector.detectDrift(currentContext);
+  
+  if (drift.isCritical) {
+    notify(`CRITICAL: Context drift ${drift.totalDrift.toFixed(1)}%`);
+    pauseNewWork();
+    triggerRebaseline();
+  } else if (drift.totalDrift > DRIFT_WARNING) {
+    notify(`WARNING: Context drift ${drift.totalDrift.toFixed(1)}%`);
+  }
+}, 24 * 60 * 60 * 1000);  // Daily check
+```
+
+## Impact Analysis: What Changes Affect What
+
+When context changes, you need to know **what else might be affected**.
+
+### Dependency Graph
+
+```javascript
+const contextDependencies = {
+  "AGENTS.md": ["SOUL.md", "skills/*", "memory/*"],
+  "domain-model.yaml": ["prompts/*", "knowledge-graph/*", "validation/*"],
+  "skill-catalog.yaml": ["skills/*", "compression/*"],
+  "prompts/system-prompt.md": ["prompts/*", "validation/*"]
+};
+```
+
+### Impact Analysis Function
+
+```javascript
+function analyzeImpact(changedFile) {
+  const affected = new Set();
+  const visited = new Set();
+  
+  function traverse(file) {
+    if (visited.has(file)) return;
+    visited.add(file);
+    
+    for (const dependent of contextDependencies[file] || []) {
+      affected.add(dependent);
+      traverse(dependent);
+    }
+  }
+  
+  traverse(changedFile);
+  
+  return {
+    changed: changedFile,
+    affected: [...affected],
+    severity: affected.length > 10 ? "HIGH" : 
+              affected.length > 5 ? "MEDIUM" : "LOW"
+  };
+}
+```
+
+## Integration with CI/CD Pipelines
+
+Validation should be **automated** in your CI/CD pipeline.
+
+### CI Pipeline Stages
+
+```yaml
+# .github/workflows/ai-validation.yml
+stages:
+  - name: Pre-LLM Validation
+    run: |
+      npm run validate:input
+      
+  - name: LLM Generation
+    run: |
+      npm run generate
+      
+  - name: KLS Validation
+    run: |
+      npm run validate:kls
+      
+  - name: Post-Generation Validation
+    run: |
+      npm run validate:output
+      
+  - name: Drift Detection
+    run: |
+      npm run detect:drift
+      
+  - name: Impact Analysis
+    run: |
+      npm run analyze:impact
+      
+  - name: Gate Decision
+    run: |
+      # Only proceed if all validations pass
+      if [ "$GATE_STATUS" = "PASSED" ]; then
+        echo "Proceeding to next stage..."
+      else
+        echo "GATE FAILED - review required"
+        exit 1
+      fi
+```
+
+### Git Hooks
+
+```bash
+# .git/hooks/pre-commit
+#!/bin/bash
+npm run validate:kls
+npm run detect:drift
+```
+
+## Summary: Validation as Gate
+
+Validation transforms AI generation from "trust me" to "prove it":
+
+1. **KLS protocol**: Structured validation across conceptual, structural, technical dimensions
+2. **Pre-LLM validation**: Catch syntax, semantics, grounding issues before generation
+3. **Drift detection**: Monitor context changes over time, trigger rebaselining
+4. **Impact analysis**: Know what changes affect what
+5. **CI/CD integration**: Automate validation in pipelines
+
+These gates ensure that AI outputs meet standards before they reach users.
+
+## Key Sources
+
+- KLS Schema Reference (cto-executive-system/docs/)
+- Claude Code hooks and automation
+- Context engineering validation patterns
+- Drift detection literature
