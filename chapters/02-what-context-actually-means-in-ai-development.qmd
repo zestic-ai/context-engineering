@@ -1,15 +1,113 @@
-# Chapter 2: Context Engineering as a Discipline
+# Chapter 2: What "Context" Actually Means in AI Development
 
-*TODO: Write content*
+In the previous chapter, we established that AI software fails differently than traditional software. Now we need to answer a more fundamental question: what exactly is "context" in AI development? The term is used so frequently—and so vaguely—that it has lost almost all meaning. In this chapter, we will give context a precise definition, decompose it into its components, and understand why context in AI is fundamentally different from configuration in traditional software.
 
-## Chapter Outline
+## Beyond the Chat Window
 
-- TODO: Add outline items
+When most people think of "context" in AI, they think of the chat window—the conversation history that the model uses to generate responses. This is understandable. The chat window is visible, tangible, and directly influences the model's output. But this surface-level view obscures the deeper reality.
 
-## Key Points to Cover
+Context in AI development is not a single thing. It is a **multi-dimensional construct** that encompasses everything the model relies on to produce its outputs. This includes:
 
-1. TODO: Add key points
+- The **conversation history** — the visible back-and-forth between user and system
+- The **system prompt** — the hidden instructions that define the model's persona, capabilities, and constraints
+- The **retrieved documents** — the knowledge base that the model can reference
+- The **embedded knowledge** — the weights and patterns learned during training
+- The **configuration parameters** — temperature, max tokens, top-p, and other generation settings
+- The **implicit assumptions** — everything the model "knows" about the world that was never explicitly stated
 
-## Sources
+Of these, only the conversation history is visible. The rest is hidden, implicit, and often unexamined. This is why context management is so difficult — you cannot manage what you cannot see.
 
-- TODO: Add sources
+## The Four Dimensions of Context
+
+Drawing from the Zestic AI framework, we identify four distinct dimensions of context that must be managed separately:
+
+### 1. Domain Context
+
+Domain context is the **knowledge about the problem space** — the entities, relationships, rules, and constraints that define what the AI system is working with. In a medical AI, domain context includes drug interactions, dosage limits, contraindication rules, and diagnostic criteria. In a legal AI, it includes case law, statutes, precedents, and procedural rules.
+
+Domain context is relatively stable. It changes when the real-world domain changes (new drugs, new regulations), not when the system is updated. However, it is also the most dangerous context to get wrong — errors in domain context directly cause harmful outputs.
+
+### 2. Technical Context
+
+Technical context is the **knowledge about the system itself** — its capabilities, limitations, available tools, and integration points. In Claude Code, technical context includes the available tools (Bash, Edit, Read, Write), the MCP servers, the project structure, and the execution environment.
+
+Technical context changes with every system update. When a new tool is added or a tool's behavior changes, the technical context shifts. This is why tool definitions must be versioned and validated — inconsistent technical context leads to unpredictable tool use.
+
+### 3. Operational Context
+
+Operational context is the **knowledge about the current session and task** — what the user is trying to accomplish, what has been done so far, what the expected outcome is. In a coding assistant, operational context includes the current file, the error being debugged, the test that's failing.
+
+Operational context is the most volatile. It changes with every message, every tool use, every outcome. This is the context that must be managed in real-time, with careful attention to what enters and exits the context window.
+
+### 4. Commercial Context
+
+Commercial context is the **knowledge about business constraints and priorities** — budget, timeline, stakeholder expectations, go-to-market requirements. This is the dimension that Zestic AI emphasizes as frequently neglected and causally destructive when misaligned.
+
+Commercial context is often implicit. It lives in the heads of stakeholders, in slide decks, in contract terms. When it conflicts with the other three dimensions, the AI system has no way to detect the conflict. It will confidently generate outputs that are technically correct but commercially disastrous.
+
+## Context as the Intersection of Assumptions
+
+A useful way to think about context is as the **intersection of assumptions** that the AI system must navigate:
+
+- **Assumptions about the domain** — What entities exist? What relationships hold? What rules are inviolable?
+- **Assumptions about the user** — What does the user know? What do they want? What will they do with the output?
+- **Assumptions about the system** — What can the system do? What can't it do? What should it never do?
+- **Assumptions about reality** — What's true in the world? What's changed since training? What's reliable?
+
+When these assumptions are aligned — when the AI's understanding matches the operators' intentions — the system works. When they diverge — which happens constantly in complex projects — the system fails.
+
+The challenge is that assumptions are invisible. They are not stated in the prompt. They are not retrieved from the knowledge base. They are embedded in the model's weights, absorbed during training, and reinforced through interaction. You cannot see them directly. You can only observe their effects.
+
+## Why Context Expands Faster Than It Can Be Structured
+
+Turkhanov describes this as the **entropy problem**: in enterprise AI programs, context expands faster than it can be structured. Every stakeholder interaction adds new interpretations. Every product change adds new domain knowledge. Every integration adds new technical constraints.
+
+In traditional software, requirements are structured through formal methods: specifications, user stories, acceptance criteria. These structures impose order on the problem space. They force stakeholders to be explicit about what they want.
+
+In AI software, there is no equivalent structure. The model's flexibility means that almost anything can be added to context, but nothing forces the addition to be explicit, validated, or consistent. The context grows organically, accumulating assumptions, exceptions, and edge cases that no one explicitly approved.
+
+This is why context engineering is necessary: we need to impose structure on what would otherwise be organic, entropy-driven growth.
+
+## The Role of Stakeholder Reinterpretation
+
+A critical factor in context expansion is **stakeholder reinterpretation**. Each stakeholder — developer, product manager, customer success, sales, executive — brings their own understanding to the project. They use terms differently. They prioritize differently. They remember different decisions.
+
+When these stakeholders interact with the AI system, they inadvertently introduce their reinterpretations into the context. The model doesn't know that "the feature" means different things to different people. It treats all inputs as equally authoritative.
+
+Over time, the context becomes a palimpsest — layers of reinterpretation written over each other, none fully erased. The original intent is lost. The model operates on an average of all the interpretations, which may correspond to no one's actual intent.
+
+## AI-Specific Context Variables
+
+Beyond the four dimensions, AI systems have context variables that are unique to the technology:
+
+**Model version** — Each model version has different capabilities, behaviors, and failure modes. A prompt that worked perfectly on GPT-4 may produce different results on GPT-4.1. The model version is a context variable that must be tracked and managed.
+
+**Prompt evolution** — Prompts are not static. They are tweaked, refined, and extended as the system encounters new situations. Over time, the prompt may grow to include special cases, exceptions, and workarounds that no one fully understands.
+
+**Training data shifts** — The model's underlying knowledge changes as new training data is added. This is invisible to operators, but it can cause the model's behavior to drift subtly over time.
+
+**Output interpretation** — Different stakeholders interpret the same output differently. One person sees a helpful suggestion; another sees a definitive answer. The model's output is interpreted through the lens of the interpreter's expectations.
+
+## The Context Boundary Problem
+
+A fundamental challenge is determining **what belongs in context and what doesn't**. In a traditional system, the boundary is clear: code is in, everything else is out. In an AI system, the boundary is fuzzy: almost anything could be relevant.
+
+Too much context overwhelms the model and exceeds token limits. Too little context leaves the model without the information it needs. The right boundary is task-dependent, which means it must be actively managed rather than statically defined.
+
+This is where the engineering discipline kicks in. Context engineering provides frameworks for determining what to include, what to exclude, and how to structure what remains.
+
+## Summary: A Multi-Dimensional Problem
+
+In this chapter, we have established that "context" in AI development is not a single thing but a multi-dimensional construct:
+
+1. **Domain context** — the problem space knowledge
+2. **Technical context** — the system capabilities and tools
+3. **Operational context** — the current session and task
+4. **Commercial context** — the business constraints and priorities
+
+These dimensions interact and conflict. Managing them requires explicit structure, not just better prompts. The next chapter will explore how to build that structure.
+
+## Key Sources
+
+- Turkhanov, "Context Engineering: The Missing Discipline" (Zestic AI, 2025)
+- Zestic AI framework on context dimensions
