@@ -6,7 +6,7 @@ Knowledge graphs provide a way to represent meaning that is explicit, queryable,
 
 ## What Is a Knowledge Graph?
 
-A **knowledge graph** is a structure for representing knowledge as a network of **entities** (nodes) and **relationships** (edges). Unlike databases that store flat records or documents that contain unstructured text, knowledge graphs capture the *meaning* of information by explicitly stating how things relate.
+A **knowledge graph** is a structure for representing knowledge as a network of **entities** (nodes) and **relationships** (edges). Knowledge graphs are themselves databases -- specifically, databases whose schema emphasises relationships between entities. Where relational databases store data in tables and document stores hold unstructured text, knowledge graphs capture the *meaning* of information by explicitly stating how things relate.
 
 ### The Basic Structure
 
@@ -62,7 +62,7 @@ The modern resurgence of knowledge graphs began in 2012, when Google introduced 
 
 This was significant because it represented a shift from document retrieval to entity retrieval. Google wasn't just finding pages about Leonardo; it was extracting and structuring knowledge about him.
 
-By 2024, Google's Knowledge Graph informed **over 40% of Google searches**, answering questions directly without requiring users to click through to websites.
+By 2024, Google's Knowledge Graph powered the structured information panels appearing alongside search results, answering questions directly without requiring users to click through to websites. The exact scope varies by query category, but Google describes the Knowledge Graph as central to its search strategy.
 
 ### Enterprise Ontologies
 
@@ -134,7 +134,7 @@ The "closeness" is probabilistic. The model doesn't "know" that Drug A treats Mi
 | **Explainability** | Low (why those vectors?) | High (trace the path) |
 | **Maintenance** | Easy (add embeddings) | Hard (curate relationships) |
 | **Coverage** | Broad (any text) | Deep (explicit facts) |
-| **Inference** | Limited | Can encode rules |
+| **Inference** | Limited | Transitive reasoning, inheritance, rules |
 
 ### When to Use Each
 
@@ -213,6 +213,75 @@ In the MedGemma competition, Terraphim's knowledge graph (built on SNOMED CT and
 
 This case study is covered in detail in Chapter 9, but it illustrates the core principle: a well-structured knowledge graph can prevent dangerous AI failures.
 
+## Inference: The Hidden Power of Graph Structure
+
+One capability that distinguishes knowledge graphs from simpler data stores is **inference** -- deriving new knowledge from existing relationships without storing it explicitly.
+
+### Transitive Reasoning
+
+If the graph states:
+
+```
+(Aspirin) --[is_a]--> (NSAID)
+(NSAID)   --[is_a]--> (Anti-inflammatory Drug)
+```
+
+Then the system can infer that Aspirin is an Anti-inflammatory Drug, even though that relationship is not explicitly stored. This transitive reasoning across `is_a` hierarchies is fundamental to ontology-based systems like SNOMED CT.
+
+### Inheritance
+
+Properties defined on a parent class propagate to children:
+
+```
+(Anti-inflammatory Drug) --[has_side_effect]--> (GI irritation)
+```
+
+Any drug classified under Anti-inflammatory Drug inherits this side effect. The graph does not need to store the relationship for every individual drug.
+
+### Path-Based Inference
+
+More sophisticated inference follows multi-hop paths:
+
+- "What compounds interact with drugs that treat Disease X?" requires traversing: Disease X <-- treats -- Drug <-- has_active_ingredient -- Compound <-- interacts_with -- other Compound
+- Each hop is deterministic and auditable -- unlike a language model's internal reasoning
+
+These inference capabilities mean knowledge graphs are not just stores of facts but **reasoning engines**. When combined with the validation patterns in Chapter 14, inference becomes a powerful tool for catching errors that no amount of text retrieval would detect.
+
+## From Knowledge Graphs to Context Graphs
+
+The evolution from knowledge graphs to **context graphs** represents the next step in how AI systems consume structured knowledge. A context graph is a triples-based representation of data optimised specifically for AI consumption (TrustGraph, 2025).
+
+### The Key Insight: Structure Carries Meaning
+
+A counterintuitive finding from context graph research: **structured formats like Cypher and RDF improve LLM responses despite higher token overhead**. When you pass a Cypher query result to an LLM, the syntax itself encodes what is a node, what is a property, and what is a relationship. The structure carries semantic information beyond the literal content.
+
+This means that flattening graph results into plain text before passing them to an LLM can actually *reduce* response quality. Preserving the structured format is often worth the extra tokens.
+
+### RDF, Property Graphs, and the Non-Argument
+
+A practical question in context graph design: should the backend be a triplestore (RDF), a property graph (Neo4j/Cypher), or something else? The answer is that **it does not matter much for the pipeline architecture**. The same information can be stored as RDF triples, property graph nodes and edges, or even joined relational tables.
+
+As one production deployment demonstrates, the retrieval agents built on top of these stores perform equivalently regardless of the storage backend (TrustGraph, 2025). What matters is:
+
+- **Ontology quality**: Well-defined classes, properties, and relationships
+- **Synonym coverage**: How many ways users can refer to the same concept
+- **Relationship completeness**: Whether the important connections are captured
+- **Update mechanism**: How quickly the graph reflects new knowledge
+
+The storage backend is an implementation detail. The context engineering pipeline operates at the abstraction layer above it.
+
+### Mature Graph Algorithms: The Untapped Toolbox
+
+Decades of graph algorithm research remain largely unused in AI retrieval. Current GraphRAG implementations make minimal use of established tools:
+
+- **Traversal optimisation**: Determining optimal depth per query type, rather than fixed depth
+- **Clustering**: Grouping related documents by graph structure, not just content similarity
+- **Density calculations**: Identifying densely connected subgraphs as high-confidence knowledge domains
+- **Outlier detection**: Flagging entities with unusual connectivity as potential errors or discoveries
+- **Community detection**: Finding tightly connected concept groups that form coherent topics
+
+These algorithms are well-understood, efficient, and deterministic. They represent a significant opportunity for AI retrieval systems to improve quality without introducing probabilistic uncertainty. Chapter 19 explores how hybrid pipelines can leverage this toolbox.
+
 ## Summary: Knowledge Graphs as Context Infrastructure
 
 Knowledge graphs provide the infrastructure for managing context at scale:
@@ -229,8 +298,8 @@ The next chapters explore how knowledge graphs work under the hood, how they com
 
 ## Key Sources
 
-- Turkhanov, "Context Engineering: The Missing Discipline" (Zestic AI, 2025)
 - Microsoft GraphRAG paper and documentation
 - SNOMED CT official documentation and release files
 - Terraphim AI documentation and MedGemma competition results
 - PrimeKG (Pharmacological Knowledge Graph) for biomedical relationships
+- TrustGraph context graph research (Keith Strier, 2025): context graphs, structured formats, and the RAG-to-autonomous-learning progression

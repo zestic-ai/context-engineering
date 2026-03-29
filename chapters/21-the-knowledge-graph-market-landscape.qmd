@@ -1,71 +1,157 @@
 # Chapter 21: The Knowledge Graph Market Landscape
 
-This chapter surveys the current **market for knowledge graph solutions** — what's available, where the market is going.
+The previous chapters presented knowledge graphs as engineering infrastructure. This chapter steps back to survey the **market landscape** -- what solutions exist, where the industry is heading, and how to evaluate options for your own context engineering practice.
 
-## Major Players
+The knowledge graph market in 2025-2026 is at an inflection point. After years of niche enterprise adoption, the convergence of LLMs with structured knowledge is driving mainstream interest. Understanding this landscape helps you make informed technology choices.
 
-| Vendor | Approach | Strengths |
-|--------|----------|-----------|
-| **Microsoft GraphRAG** | LLM extraction to graph | Integration with Azure |
-| **Neo4j** | Property graph | Mature, widely used |
-| **Amazon Neptune** | Graph DB | AWS integration |
-| **Terraphim** | Deterministic + KG | Accuracy, speed |
-| **Google** | Knowledge Graph | Scale, search integration |
+## Categories of Knowledge Graph Solutions
 
-### GraphRAG Approach
+The market divides into four broad categories, each serving different needs:
 
-Microsoft's GraphRAG extracts entities and relationships using LLMs:
+### 1. Graph Databases (General Purpose)
+
+These are the established platforms for storing and querying graph-structured data.
+
+| Platform | Model | Query Language | Deployment |
+|----------|-------|---------------|------------|
+| **Neo4j** | Property graph | Cypher | Self-hosted, AuraDB (cloud) |
+| **Amazon Neptune** | Property graph + RDF | Gremlin, SPARQL, openCypher | AWS managed |
+| **Azure Cosmos DB (Gremlin API)** | Property graph | Gremlin | Azure managed |
+| **TigerGraph** | Property graph | GSQL | Self-hosted, cloud |
+| **Stardog** | RDF/OWL | SPARQL | Enterprise |
+
+Neo4j remains the most widely adopted graph database, with a mature ecosystem and strong community. Its Cypher query language has become the basis for the ISO GQL standard. For teams already on AWS, Neptune offers a managed alternative with both property graph and RDF support.
+
+These platforms provide the storage layer but do not, by themselves, solve the AI context problem. They store and query graphs efficiently -- the context engineering pipeline is built on top.
+
+### 2. LLM-Powered Graph Construction (GraphRAG)
+
+A newer category uses LLMs to automatically extract entities and relationships from unstructured text, building knowledge graphs without manual curation.
+
+**Microsoft GraphRAG** is the most prominent example. Its workflow:
+
+1. **Indexing**: LLMs extract entities and relationships from a document corpus
+2. **Community detection**: Graph algorithms identify clusters of related entities
+3. **Summarisation**: LLMs generate summaries at multiple levels of the hierarchy
+4. **Query**: Questions are answered using graph-structured context rather than raw document chunks
 
 ```python
-# GraphRAG workflow
-1. Extract entities from documents (LLM)
-2. Build relationship graph
-3. Index for retrieval
-4. Query with graph context
+# Simplified GraphRAG extraction pipeline
+def extract_graph(documents):
+    entities = []
+    relationships = []
+    for doc in documents:
+        # LLM extracts structured knowledge from text
+        extraction = llm_extract(doc, schema=entity_relationship_schema)
+        entities.extend(extraction.entities)
+        relationships.extend(extraction.relationships)
+
+    # Build graph and detect communities
+    graph = build_graph(entities, relationships)
+    communities = detect_communities(graph)
+    return graph, communities
 ```
 
-**Pros:** Handles large corpora, semantic extraction
-**Cons:** LLM-dependent, less precise
+**Strengths**: Handles large unstructured corpora; automated extraction reduces manual curation effort; community detection provides multi-scale summarisation.
 
-### Terraphim Approach
+**Limitations**: Extraction quality depends on the LLM -- errors propagate into the graph; no deterministic guarantees; extraction costs scale with corpus size; the graph reflects the LLM's interpretation, not ground truth.
 
-Terraphim uses deterministic matching:
+GraphRAG is best suited for exploratory analysis of large document collections where manual curation is impractical. It is less suitable for safety-critical applications where extraction errors carry real consequences.
 
-```python
-# Terraphim workflow
-1. Define vocabulary (manual)
-2. Build automata
-3. Match patterns exactly
-4. Validate against KG
-```
+### 3. Context Graph Platforms
 
-**Pros:** Precise, fast, explainable
-**Cons:** Requires vocabulary definition
+A emerging category optimises graph-structured data specifically for AI consumption, rather than general-purpose graph queries.
+
+**TrustGraph** represents this approach. Built on Apache Cassandra as its default triplestore, TrustGraph focuses on the pipeline from raw data to AI-ready context:
+
+- Stores triples (subject-predicate-object) optimised for AI retrieval
+- Supports RDF natively, with translation to property graph formats (Neo4j) available
+- One production deployment runs over a billion nodes and edges in Cassandra (TrustGraph, 2025)
+- Retrieval agents built on top of the store perform equivalently regardless of the storage backend
+
+The context graph approach differs from general-purpose graph databases in its design priorities: rather than optimising for ad-hoc queries, it optimises for feeding structured context into LLM prompts. This includes preserving structured formats (Cypher, RDF) in the context, because the structure itself carries semantic information that improves LLM responses.
+
+### 4. Deterministic Knowledge Retrieval
+
+This category uses knowledge graphs not for storage or extraction but for **retrieval and validation** -- matching queries against a curated vocabulary with deterministic precision.
+
+**Terraphim** operates in this space. As described in Chapters 7 and 8, its approach:
+
+- Compiles curated vocabularies into Aho-Corasick automata
+- Matches query terms against the vocabulary in <1ms
+- Scores results by graph connectivity
+- Provides complete explainability for every result
+
+The tradeoff is explicit: Terraphim requires upfront vocabulary curation but delivers deterministic, explainable, zero-cost-per-query retrieval. This makes it complementary to, rather than competitive with, the other categories.
 
 ## Market Trends
 
 ### Trend 1: RAG Fatigue
 
- enterprises are tired of pure vector RAG problems:
+By 2025, enterprises that adopted basic RAG (Retrieval-Augmented Generation) are encountering its limitations at scale:
 
-- No grounding in facts
-- "Similar" doesn't mean "relevant"
-- Can't explain why results returned
+- **Precision problems**: "Semantically similar" does not mean "relevant." Vector similarity retrieves documents that mention related topics but may not answer the actual question.
+- **No explainability**: When a RAG system returns poor results, there is no audit trail explaining *why* those documents were retrieved.
+- **No validation**: The LLM can ignore retrieved documents entirely, or hallucinate despite having correct context.
+- **Cost at scale**: Embedding computation and vector database queries add per-query costs that compound at enterprise scale.
 
-### Trend 2: Regulation Driving Structure
+This "RAG fatigue" is driving interest in structured approaches -- knowledge graphs, ontologies, and hybrid pipelines -- that offer the precision and explainability that pure vector RAG lacks. The progression from RAG to GraphRAG to OntologyRAG described in Chapter 19 reflects this market movement.
 
-EU AI Act, FDA, and financial regulations require **explainability** — driving demand for knowledge graphs.
+### Trend 2: Regulation Driving Structured Knowledge
 
-### Trend 3: Hybrid Solutions
+Regulatory frameworks are creating demand for explainable AI systems:
 
-Market moving toward hybrid: deterministic for precision, semantic for breadth.
+- **EU AI Act**: Requires transparency and explainability for high-risk AI applications. Knowledge graphs provide the audit trail that black-box retrieval cannot.
+- **FDA guidance on AI/ML**: Medical AI must demonstrate the reasoning behind recommendations. Graph-grounded systems can trace every output to its source knowledge.
+- **Financial regulations**: Trading and compliance AI must explain its outputs to regulators. Deterministic retrieval with full audit trails meets this requirement.
+
+Regulation is shifting the market from "what gives the best results" to "what gives explainable results." Knowledge graphs are well-positioned for this shift because explainability is inherent in their structure -- every answer can be traced through the graph.
+
+### Trend 3: Hybrid Architectures
+
+The market is converging on hybrid architectures that combine multiple retrieval methods:
+
+- **Deterministic search** for known vocabulary: fast, precise, free
+- **Graph traversal** for relationship queries: follows connections, no API cost
+- **Semantic search** for novel queries: flexible, handles paraphrasing
+- **LLM-based extraction** for building graphs from unstructured data
+
+No single approach handles all use cases. The winners will be platforms and architectures that integrate multiple methods, routing each query to the most appropriate strategy. Chapter 19 describes these hybrid pipeline patterns in detail.
+
+### Trend 4: The Semantic Web, Revisited
+
+Perhaps the most unexpected trend is the revival of semantic web concepts. RDF, OWL, SKOS, and other standards from the 2000s-era semantic web movement are finding new relevance in the AI era. LLMs can read and understand machine-readable formats like RDF and Cypher, potentially realising the interoperability vision that the semantic web promised but could not deliver with pre-LLM technology.
+
+MCP (Model Context Protocol) and A2A (Agent-to-Agent) protocols pursue the same interoperability goal as the semantic web -- enabling systems to share structured knowledge across boundaries. Whether they succeed where the semantic web struggled remains an open question.
+
+## Evaluation Framework
+
+When selecting knowledge graph technology for context engineering, consider these dimensions:
+
+| Dimension | Questions to Ask |
+|-----------|------------------|
+| **Curation model** | Manual vocabulary? Automated extraction? Hybrid? |
+| **Query determinism** | Same query always returns same results? |
+| **Explainability** | Can you trace why each result was returned? |
+| **Update latency** | How quickly does the graph reflect new knowledge? |
+| **Scale** | Thousands of entities? Millions? Billions? |
+| **Integration** | Does it plug into your existing LLM pipeline? |
+| **Cost model** | Per-query costs? Fixed infrastructure? |
+| **Regulatory fit** | Does it satisfy your industry's explainability requirements? |
+
+The "right" choice depends on your specific constraints. A startup building a chatbot has different needs from a hospital deploying a diagnostic assistant. The evaluation framework above helps you ask the right questions for your context.
 
 ## Summary
 
-The knowledge graph market is growing:
-- GraphRAG leads in enterprise
-- Terraphim leads in precision/speed
-- Hybrid is the emerging standard
-- Regulation is driving adoption
+The knowledge graph market is at an inflection point driven by three forces: RAG fatigue pushing enterprises toward structured approaches, regulation requiring explainability, and hybrid architectures combining the strengths of multiple retrieval methods.
 
-Key Sources: Market analysis, vendor documentation
+Four categories of solutions serve different needs:
+
+1. **Graph databases** (Neo4j, Neptune): General-purpose graph storage and querying
+2. **LLM-powered construction** (GraphRAG): Automated graph building from unstructured text
+3. **Context graph platforms** (TrustGraph): Graph-structured data optimised for AI consumption
+4. **Deterministic retrieval** (Terraphim): Curated vocabulary with precision, speed, and explainability
+
+The trend is toward hybrid architectures that combine these approaches. The rest of this book provides the engineering patterns to build those architectures.
+
+Key Sources: Microsoft GraphRAG documentation, Neo4j ecosystem documentation, TrustGraph context graph research (Keith Strier, 2025), EU AI Act requirements, Terraphim AI technical documentation

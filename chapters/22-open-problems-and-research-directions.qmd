@@ -1,86 +1,200 @@
 # Chapter 22: Open Problems and Research Directions
 
-This final chapter identifies **open problems** — the unsolved challenges that researchers and practitioners should address.
+This final chapter identifies **open problems** -- the unsolved challenges that researchers and practitioners should address. Context engineering is a young discipline. The previous 21 chapters provide a foundation; what follows are the questions we cannot yet answer.
 
-## Open Problems
+## The Verification Bottleneck
 
-### Problem 1: Cross-Context Coherence
+The most fundamental open problem in AI software development is not generation -- it is **verification**. As AI generation becomes exponentially cheaper, the bottleneck shifts from producing code and content to confirming that it is correct.
 
-**Challenge:** Maintaining semantic alignment across sessions and agents.
+### The Missing Junior Loop
 
-```javascript
-// Sessions have different contexts
-sessionA.context = { ... };
-sessionB.context = { ... };
+Historically, junior engineers served as a training pipeline: they did measurable work (write code, run tests, fix bugs), seniors reviewed their output, and through that review cycle, juniors developed the judgement to become seniors. AI agents are now filling the junior role -- generating code at scale, running tests, fixing linting errors.
 
-// How do we ensure coherence?
-// Current approaches: none fully work
-```
+But the review cycle that trained seniors has no equivalent. When a junior engineer writes code, a senior can review it and provide feedback. When an AI generates 1,000 lines of code in an hour, no human can review it at that pace. The "junior loop" that created expertise is breaking.
 
-### Problem 2: Real-Time Context Updates
+This creates a structural problem: who trains the next generation of senior engineers if the junior work is automated? And who verifies the AI's output if the senior pipeline thins?
+
+### The Codifier's Curse
+
+When you codify expertise into AI systems, you lose the tacit knowledge that was never explicitly documented. The system appears to work until it encounters edge cases where that tacit knowledge mattered. This is the "Codifier's Curse" -- the very act of automating expertise can destroy the conditions that created it.
+
+For context engineering specifically: the knowledge graphs, vocabularies, and validation rules described in this book all represent codified expertise. If the engineers who built them leave, and the junior pipeline that would train replacements is broken, the system becomes a black box -- working, but unmaintainable.
+
+### The Economics of Verification
+
+The core economic insight: verification costs grow faster than generation costs. Consider the progression:
+
+1. AI generates 1,000 lines of code in an hour
+2. Human review requires days of careful analysis
+3. Pressure to ship leads to superficial verification
+4. Subtle bugs accumulate as "hidden technical debt"
+
+This is the "AI sandwich" firm structure: AI does the measurable generation, humans do the unmeasurable verification, AI does the final polish. But the middle layer does not scale.
+
+At some point, it becomes economically rational to deploy unverified AI outputs. The result is accumulating "hidden systemic risk" -- failures that are statistically invisible until they are catastrophic.
+
+### Measurability Bias
+
+The shift from "skill-biased" to "measurability-biased" technological progress is a crucial reframing. Tasks that are easy to verify get automated first -- not because they are simple, but because we can confirm the AI did them correctly. This creates a dangerous selection bias: we automate precisely the things we think we understand, while the unmeasurable (but critical) work remains neglected.
+
+For context engineering, this means: the parts of context management that are easy to measure (token counts, retrieval accuracy, response latency) get optimised, while the parts that are hard to measure (conceptual coherence, domain alignment, long-term maintainability) get ignored.
+
+### Goal-Driven Execution as Partial Solution
+
+One approach to scaling verification: build it into the generation loop. Rather than generating first and verifying later, define verifiable success criteria before generation begins:
+
+- "Add validation" becomes "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" becomes "Write a test that reproduces it, then make it pass"
+- "Refactor X" becomes "Ensure tests pass before and after"
+
+This transforms open-ended tasks into closed-loop verification cycles. It does not solve the fundamental problem -- someone must still define the success criteria, and that requires expertise -- but it reduces the review surface area.
+
+## LLM as a Judge: Automated Verification at Scale
+
+One promising direction for addressing the verification bottleneck is using LLMs themselves as judges -- automated evaluation systems that assess AI-generated outputs against quality criteria.
+
+### The Approach
+
+LLM-as-Judge evaluation uses a separate LLM (distinct from the generator) to score outputs against defined rubrics. Four evaluation modes exist:
+
+| Mode | Description | Best For |
+|------|-------------|----------|
+| **Pointwise** | Score a single response in isolation | Quality assessment, moderation |
+| **Reference-based** | Compare to a known good answer | Accuracy, regression testing |
+| **Pairwise** | Pick the better of two responses | A/B testing, preference data |
+| **Listwise** | Rank multiple responses | Leaderboards, best-of-N selection |
+
+### Known Limitations
+
+LLM judges introduce their own biases:
+
+- **Position bias**: LLMs tend to favour the first response shown (10-20% swing in pairwise results)
+- **Verbosity bias**: Longer responses score higher regardless of quality
+- **Self-enhancement bias**: Models prefer outputs matching their own style (GPT rates GPT higher, Claude rates Claude higher)
+- **Authority bias**: Confident, assertive responses score higher, even when hedging is appropriate
+- **Format bias**: Well-formatted responses (markdown, bullets) score higher than identical content in plain text
+
+### Metacognitive Self-Correction
+
+Research from FINAL-Bench (HuggingFace, 2025) reveals a counterintuitive finding about AI self-evaluation: **94.8% of performance gain comes from error recovery (acting on detected errors), not metacognitive accuracy (correctly identifying uncertainty levels)**.
+
+This means it matters more that agents *act* on detected errors than that they *correctly identify* their uncertainty level. For verification systems, this suggests biasing towards correction attempts even when confidence in the detection is moderate. A false-positive correction attempt is cheaper than a missed error.
+
+### The Hybrid Verification Pipeline
+
+The recommended approach combines multiple verification methods:
+
+1. **Deterministic checks first**: Validate format, structure, computable criteria (syntax, type checking, test execution)
+2. **LLM-as-Judge for nuance**: Assess subjective qualities like helpfulness, completeness, and clarity
+3. **Ensemble across models**: Use multiple judge LLMs to reduce single-model bias
+4. **Human review for calibration**: Sample 5-10% for expert evaluation, calibrate the automated judges against human judgement
+5. **Escalation for edge cases**: Flag low-confidence or borderline scores for human review
+
+This is context engineering applied to verification itself -- structuring the evaluation context to maximise the value of each verification method.
+
+## Cross-Context Coherence
+
+**Challenge:** Maintaining semantic alignment across sessions, agents, and time.
+
+When multiple AI agents work on the same project, each operates within its own context window. Agent A may establish a convention in session 1 that Agent B contradicts in session 2. Over time, the accumulated context across sessions becomes incoherent.
+
+Current approaches (shared CLAUDE.md files, handover documents, memory systems) are ad-hoc. No formal theory exists for how to compose contexts from multiple sources while maintaining coherence. Key questions:
+
+- How do you detect when two agent sessions have established contradictory conventions?
+- What is the "merge conflict" equivalent for context, and how do you resolve it?
+- Can context coherence be measured, or is it inherently subjective?
+
+## Real-Time Context Updates
 
 **Challenge:** Hot-reloading knowledge graphs without breaking coherence.
 
-```javascript
-// Want: update KG, immediately usable
-await kg.update(entity, newFacts);
-// But: existing context may be invalidated
-```
+When a knowledge graph is updated while agents are actively using it, several problems arise:
 
-### Problem 3: Privacy in Context
+- Existing context may reference entities or relationships that have been modified
+- Cached query results become stale
+- In-flight operations may see an inconsistent graph state
 
-**Challenge:** Using personal context without exposing it.
+This is analogous to database consistency under concurrent writes, but with an additional complication: the "clients" (LLMs) have long-lived context windows that cannot be atomically updated.
 
-```javascript
-// Want: personalized context
-// But: privacy, security concerns
-// Solution: not solved
-```
+## Privacy-Preserving Context
 
-## Research Directions
+**Challenge:** Using personal or sensitive context without exposing it.
 
-### Direction 1: Context Benchmarking
+AI systems that leverage personal context (user preferences, organisational knowledge, proprietary data) face a tension: more context improves response quality, but exposing that context creates privacy and security risks.
 
-We need **standard benchmarks** for context quality:
+Open questions include:
 
-```python
-benchmarks = {
-  "retrieval_accuracy": "percentage of relevant results",
-  "grounding_rate": "percentage of claims verified",
-  "drift_detection": "time to detect drift",
-  "latency": "time to retrieve context"
-}
-```
+- Can context be injected into prompts in a way that prevents the LLM from reproducing it verbatim?
+- How do you audit what context an LLM "learned" from a conversation vs what it already knew?
+- Can federated or differential privacy techniques be applied to context engineering?
 
-### Direction 2: Automated Vocabulary Building
+## Automated Vocabulary Building
 
-Manually building vocabularies doesn't scale:
+Manually building domain vocabularies does not scale. The vocabularies described in Chapter 8 require domain experts to define terms, synonyms, and relationships. For large or rapidly evolving domains, this bottleneck limits adoption.
 
-```python
-# Research: automatically extract vocabulary from corpus
-# Using: LLM extraction + human validation
-```
+Research directions:
 
-### Direction 3: Context Composability
+- **LLM-assisted extraction**: Use LLMs to extract candidate vocabulary from domain documents, with human validation of the results
+- **Incremental learning**: Start with a seed vocabulary and expand it as the system encounters new terms in use
+- **Cross-domain transfer**: Adapt vocabularies from related domains rather than building from scratch
 
-Combining contexts from multiple sources:
+The challenge is quality: an automatically built vocabulary with 90% accuracy may be worse than no vocabulary at all, because the 10% of errors create false confidence.
 
-```python
-# Want: compose user context + project context + domain context
-# Current: ad-hoc merging
-# Needed: formal composition algebra
-```
+## Context Composability
+
+**Challenge:** Combining contexts from multiple sources into a coherent whole.
+
+A practical AI system needs to compose:
+- User-specific context (preferences, history)
+- Project-specific context (domain model, conventions)
+- Organisation-specific context (policies, standards)
+- Tool-specific context (API documentation, configuration)
+
+Currently, this composition is ad-hoc: contexts are concatenated, hoping the LLM will sort out conflicts. A formal composition algebra would define:
+
+- **Precedence rules**: When contexts conflict, which wins?
+- **Scope boundaries**: Which context applies to which queries?
+- **Inheritance**: Can child contexts override parent contexts?
+
+## Context Benchmarking
+
+We need **standard benchmarks** for context quality. Current evaluation is subjective ("the AI seems to give better answers with this context"). Rigorous benchmarks would measure:
+
+| Metric | Definition | Current State |
+|--------|-----------|---------------|
+| Retrieval accuracy | Percentage of relevant documents retrieved | Well-measured for RAG |
+| Grounding rate | Percentage of claims verified against KG | Emerging |
+| Drift detection speed | Time to detect meaningful context drift | No standard |
+| Context efficiency | Quality improvement per token of context | No standard |
+| Composability | Quality after merging multiple contexts | No standard |
+
+Without benchmarks, we cannot compare approaches rigorously. This holds back the entire field.
+
+## The Frontier: Towards Autonomous Learning
+
+The ultimate goal of context engineering is systems that improve their own context over time -- autonomous learning systems that reingest their outputs with metadata, adjusting retrieval strategies for new and old data.
+
+This frontier involves:
+
+- **Self-describing information stores**: Systems carrying metadata about their own structure, enabling adaptive retrieval without human configuration
+- **Dynamic retrieval strategies**: LLMs deriving retrieval strategies for unseen information types, rather than relying on pre-configured pipelines
+- **Temporal reasoning**: Weighing repeated observations over decades against recent unconfirmed data, distinguishing freshness from accuracy
+
+We are genuinely scratching the surface of what graph tooling can do. Decades of graph algorithms -- traversal optimisation, clustering, density calculation, outlier detection, community detection -- remain largely unused in AI retrieval. The hybrid pipeline patterns in Chapter 19 begin to leverage this toolbox, but the majority of its potential is unexplored.
 
 ## Summary
 
-The field is young. Key problems:
-- Cross-context coherence
-- Real-time updates
-- Privacy in context
-- Benchmarking
-- Automation
-- Composability
+The field is young. The foundational problems are:
+
+1. **Verification bottleneck**: Generation scales, verification does not. Who checks the AI's work?
+2. **Cross-context coherence**: Multiple agents, sessions, and time -- how to keep context consistent?
+3. **Real-time updates**: Changing knowledge graphs without breaking in-flight operations
+4. **Privacy in context**: Using personal data without exposing it
+5. **Automated vocabulary**: Building domain vocabularies without requiring full-time experts
+6. **Context composability**: Merging multiple context sources with formal rules
+7. **Benchmarking**: Standard metrics for comparing context engineering approaches
+8. **Autonomous learning**: Systems that improve their own retrieval over time
 
 This book provides a foundation. The rest is for you to build.
 
-Key Sources: Research literature, open problems in AI
+Key Sources: "Some Simple Economics of AGI" (verification bottleneck), Karpathy LLM coding guidelines, FINAL-Bench metacognitive research, TrustGraph context graph progression, LLM-as-Judge best practices literature

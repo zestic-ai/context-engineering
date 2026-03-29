@@ -1,131 +1,403 @@
 # Chapter 19: Hybrid Pipeline Patterns
 
-This chapter shows how to **combine** deterministic and probabilistic approaches — getting the best of both worlds.
+In Chapter 6, we established that deterministic search and vector embeddings serve different purposes. In Chapter 7, we showed how Terraphim's graph embeddings achieve deterministic precision for vocabulary-matched terms. But real-world systems rarely face only one type of query. This chapter shows how to **combine** deterministic and probabilistic approaches into hybrid pipelines that get the best of both worlds.
+
+The central argument is simple: no single retrieval method handles all queries well. Deterministic search excels at precision for known vocabulary. Semantic search handles novel queries and paraphrasing. Knowledge graph grounding provides factual verification. A hybrid pipeline routes each query to the right method -- or combines multiple methods in sequence.
+
+## The Evolution from RAG to Context Graphs
+
+Before diving into implementation patterns, it helps to understand where hybrid pipelines sit in the broader evolution of AI context retrieval. The progression from basic RAG to sophisticated context graphs provides the conceptual foundation.
+
+### The Eight-Step Progression
+
+1. **LLMs answer from training data** -- the baseline, with no external context
+2. **RAG**: Stuff prompts with text chunks retrieved by semantic similarity over vector embeddings
+3. **GraphRAG**: Flexible knowledge representations with rich relationships, moving beyond text chunks and semantic similarity alone
+4. **OntologyRAG**: Structured ontologies for precision, improved recall, and granular retrieval
+5. **Information retrieval analytics**: Specialised strategies for temporal data, anomaly detection, clustering, and domain-specific challenges
+6. **Self-describing information stores**: Systems carrying metadata about their own structure, enabling adaptive retrieval
+7. **Dynamic information retrieval strategies**: LLMs deriving retrieval strategies for unseen information types
+8. **Autonomous learning**: Systems reingesting their own outputs with metadata, adjusting retrieval for new and old data
+
+Most production systems today operate at steps 2-4. Steps 5-8 represent the research frontier. The hybrid pipeline patterns in this chapter primarily address steps 3-4, with patterns that extend towards step 5.
+
+The critical insight from this progression: each step does not replace the previous one. A mature system uses basic RAG for some queries, graph-grounded retrieval for others, and ontology-driven precision for a third category. The hybrid pipeline is the orchestration layer that routes queries to the right strategy.
+
+### Why Structured Formats Improve LLM Responses
+
+A counterintuitive finding that underpins hybrid pipeline design: **structured formats like Cypher and RDF improve LLM responses despite higher token overhead**. The structure itself carries information -- it encodes what is a node, what is a property, and what is a relationship. When you pass a Cypher query result to an LLM, the syntax tells the model about the data's semantics, not just its content.
+
+This means hybrid pipelines should not always flatten graph results into plain text before passing them to the LLM. Preserving structure is often worth the extra tokens.
 
 ## The Hybrid Architecture
 
 A hybrid pipeline routes queries based on their characteristics:
 
 ```javascript
-async function hybridPipeline(query) {
+async function hybridPipeline(query, context) {
   // Step 1: Classify the query
-  const classification = classifyQuery(query);
-  
-  if (classification.type === "known_entity") {
-    // Use deterministic: exact match, fast, precise
-    return await deterministicSearch(query);
-    
-  } else if (classification.type === "open_ended") {
-    // Use semantic: broader search, handles novel cases
-    return await semanticSearch(query);
-    
-  } else if (classification.type === "fact_check") {
-    // Use knowledge graph grounding
-    return await kgGround(semanticSearch(query));
+  const classification = classifyQuery(query, context);
+
+  // Step 2: Route to appropriate strategy
+  switch (classification.strategy) {
+    case "deterministic":
+      // Known vocabulary, exact match needed
+      return await deterministicSearch(query);
+
+    case "semantic":
+      // Novel query, needs similarity matching
+      return await semanticSearch(query);
+
+    case "grounded":
+      // Fact-checking, needs KG verification
+      return await groundedSearch(query);
+
+    case "hybrid":
+      // Complex query, combine multiple methods
+      return await multiMethodSearch(query, classification);
   }
 }
 ```
 
 ### Query Classification
 
+The router is the most important component. A naive router uses pattern matching; a production router considers the query's relationship to the known vocabulary:
+
 ```javascript
-function classifyQuery(query) {
-  // Check if query matches known vocabulary
-  const vocabMatch = matchVocabulary(query);
-  
-  if (vocabMatch.exact) {
-    return { type: "known_entity", confidence: 0.95 };
+function classifyQuery(query, context) {
+  // Check vocabulary coverage
+  const vocabMatch = matchVocabulary(query, context.knowledgeGraph);
+
+  if (vocabMatch.coverage > 0.8) {
+    // Most terms are known -- deterministic is sufficient
+    return { strategy: "deterministic", confidence: 0.95 };
   }
-  
-  // Check if it's a factual question
-  if (query.match(/^(what is|who is|when did|where is)/i)) {
-    return { type: "fact_check", confidence: 0.8 };
+
+  if (vocabMatch.coverage > 0.4) {
+    // Partial match -- use deterministic for known terms,
+    // semantic for unknown
+    return { strategy: "hybrid", confidence: 0.7 };
   }
-  
-  // Default: open-ended
-  return { type: "open_ended", confidence: 0.5 };
+
+  // Check if factual verification is needed
+  if (requiresFactCheck(query)) {
+    return { strategy: "grounded", confidence: 0.8 };
+  }
+
+  // Novel query -- semantic search
+  return { strategy: "semantic", confidence: 0.5 };
 }
 ```
 
-## Routing Logic
+The vocabulary coverage score is the key metric. When most query terms appear in the knowledge graph, deterministic search will be faster and more precise. When terms are novel, semantic search handles the flexibility. The hybrid strategy combines both.
+
+## Routing Patterns
+
+### Pattern 1: Cascade (Try Cheap First)
+
+The cascade pattern tries the cheapest method first and escalates only if results are insufficient:
 
 ```javascript
-class QueryRouter {
-  constructor(config) {
-    this.deterministic = config.deterministic;
-    this.semantic = config.semantic;
-    this.grounding = config.grounding;
+async function cascadeSearch(query) {
+  // Try deterministic first (free, fast)
+  const deterministicResults = await deterministicSearch(query);
+
+  if (deterministicResults.confidence > 0.8) {
+    return { results: deterministicResults, method: "deterministic" };
   }
-  
-  async route(query) {
-    const classification = classifyQuery(query);
-    
-    switch (classification.type) {
-      case "known_entity":
-        return this.routeDeterministic(query);
-        
-      case "fact_check":
-        return this.routeGrounded(query);
-        
-      default:
-        return this.routeSemantic(query);
+
+  // Escalate to semantic (costs per query)
+  const semanticResults = await semanticSearch(query);
+
+  if (semanticResults.confidence > 0.7) {
+    return { results: semanticResults, method: "semantic" };
+  }
+
+  // Final escalation: ground in KG
+  const grounded = await kgGround(semanticResults);
+  return { results: grounded, method: "grounded" };
+}
+```
+
+This pattern optimises for cost. Deterministic search is essentially free (precompiled automata, no API calls). Semantic search requires embedding computation. KG grounding adds verification overhead. The cascade ensures you only pay for what you need.
+
+### Pattern 2: Fan-Out (Search All, Merge Results)
+
+The fan-out pattern runs multiple methods in parallel and merges results:
+
+```javascript
+async function fanOutSearch(query) {
+  // Run all methods in parallel
+  const [deterministic, semantic, graphTraversal] = await Promise.all([
+    deterministicSearch(query),
+    semanticSearch(query),
+    graphTraversal(query)
+  ]);
+
+  // Merge and deduplicate
+  return mergeResults(
+    { results: deterministic, weight: 0.4 },
+    { results: semantic, weight: 0.35 },
+    { results: graphTraversal, weight: 0.25 }
+  );
+}
+
+function mergeResults(...sources) {
+  const merged = new Map();
+
+  for (const source of sources) {
+    for (const result of source.results) {
+      const existing = merged.get(result.id);
+      if (existing) {
+        existing.score += result.score * source.weight;
+        existing.methods.push(source.method);
+      } else {
+        merged.set(result.id, {
+          ...result,
+          score: result.score * source.weight,
+          methods: [source.method]
+        });
+      }
     }
   }
-  
-  async routeDeterministic(query) {
-    const results = await this.deterministic.search(query);
-    return { 
-      results, 
-      method: "deterministic",
-      latency: results.latency 
+
+  return [...merged.values()].sort((a, b) => b.score - a.score);
+}
+```
+
+Fan-out is more expensive but produces higher recall. Documents found by multiple methods get boosted scores, which is a strong relevance signal.
+
+### Pattern 3: Semantic Enrichment Pipeline
+
+This pattern uses deterministic search to seed context, then enriches it with semantic analysis. It is particularly effective when integrating Terraphim's graph embeddings with tools that manage LLM context files.
+
+```python
+def semantic_enrichment_pipeline(query, knowledge_graph):
+    # Phase 1: Deterministic seed
+    # Use Aho-Corasick to find all known terms in the query
+    matched_terms = knowledge_graph.match_terms(query)
+
+    # Phase 2: Graph expansion
+    # Traverse the KG to find related concepts
+    expanded_terms = set(matched_terms)
+    for term in matched_terms:
+        neighbours = knowledge_graph.get_neighbours(term, depth=2)
+        expanded_terms.update(neighbours)
+
+    # Phase 3: Gap detection
+    # Check if the expanded set covers the query's intent
+    query_concepts = extract_concepts(query)
+    missing = query_concepts - expanded_terms
+
+    if missing:
+        # Phase 4: Semantic fallback for unknown concepts
+        semantic_results = semantic_search(missing)
+        expanded_terms.update(semantic_results)
+
+    # Phase 5: Retrieve and rank documents
+    documents = retrieve_documents(expanded_terms)
+    return rank_by_connectivity(documents, knowledge_graph)
+```
+
+This pipeline demonstrates a key principle: **use deterministic methods to establish a precise foundation, then use probabilistic methods to fill gaps**. The knowledge graph provides the structure; semantic search provides the flexibility.
+
+### Multi-Dimensional Context Analysis
+
+When combining retrieval methods, it helps to categorise what each contributes:
+
+| Context Type | Source | Purpose | Cost |
+|-------------|--------|---------|------|
+| **Direct Context** | Deterministic search | Exact matches for known vocabulary | Free |
+| **Semantic Context** | Vector embeddings | Novel terms, paraphrases | Per-query |
+| **Structural Context** | Graph traversal | Relationships, paths, connectivity | Free |
+| **Gap Context** | Semantic fallback | Missing concepts identified by graph analysis | Per-query |
+
+The hybrid pipeline selects from these context types based on query classification, then assembles the final context from multiple sources.
+
+## RDF, Property Graphs, and the Non-Argument
+
+A practical question that arises in hybrid pipeline design: should the knowledge graph backend be a triplestore (RDF), a property graph (Neo4j/Cypher), or something else entirely?
+
+The answer, perhaps surprisingly, is that **it does not matter much for the pipeline architecture**. The same information can be stored as RDF triples, property graph nodes and edges, or even joined relational tables. One production system runs over a billion nodes and edges in Apache Cassandra. Another uses Neo4j. The retrieval agents built on top of these stores perform equivalently.
+
+What matters is:
+
+- **The ontology quality**: Well-defined classes, properties, and relationships
+- **The synonym coverage**: How many ways can users refer to the same concept?
+- **The relationship completeness**: Are the important connections captured?
+- **The update mechanism**: How quickly can the graph reflect new knowledge?
+
+The storage backend is an implementation detail. The hybrid pipeline operates at the abstraction layer above it.
+
+## Mature Graph Algorithms: The Untapped Toolbox
+
+Decades of graph algorithm research remain largely untapped in AI retrieval systems. Current GraphRAG implementations make minimal use of these tools. Hybrid pipelines can leverage them for more sophisticated retrieval:
+
+- **Graph traversal depth optimisation**: Determine the optimal traversal depth per query type, rather than using a fixed depth
+- **Clustering analysis**: Group related documents by graph structure, not just content similarity
+- **Density calculations**: Identify densely connected subgraphs as high-confidence knowledge domains
+- **Outlier detection**: Flag entities with unusual connectivity patterns as potential errors or novel discoveries
+- **Community detection**: Find tightly connected groups of concepts that form coherent topics
+
+```javascript
+function leverageGraphAlgorithms(query, knowledgeGraph) {
+  // Use PageRank to find important nodes near the query
+  const seedNodes = knowledgeGraph.match(query);
+  const important = pageRank(seedNodes, knowledgeGraph, { depth: 3 });
+
+  // Use community detection to find topic clusters
+  const communities = detectCommunities(important);
+
+  // Return documents from the most relevant community
+  const relevantCommunity = communities
+    .sort((a, b) => b.relevanceToQuery - a.relevanceToQuery)[0];
+
+  return relevantCommunity.documents;
+}
+```
+
+These algorithms are well-understood, efficient, and deterministic. They represent a significant opportunity for hybrid pipelines to improve retrieval quality without introducing probabilistic uncertainty.
+
+## Temporal Context in Hybrid Pipelines
+
+One of the most challenging aspects of hybrid pipeline design is handling **temporal context**: information that changes over time, where freshness and accuracy are different dimensions.
+
+A common mistake is treating recency as a proxy for accuracy. In practice:
+
+- Old, obscure data that remains corroborated across multiple sources may be more valid than newer unconfirmed data
+- "Freshness" and "recency" are not the same as "accuracy" and "precision"
+- Temporal relationships establish ground truth through consistency of observation over time
+
+Hybrid pipelines should weight temporal signals differently depending on the query type:
+
+```javascript
+function temporalWeight(document, queryType) {
+  const age = Date.now() - document.lastUpdated;
+  const corroboration = document.sourceCount;
+
+  if (queryType === "factual") {
+    // For facts: corroboration matters more than recency
+    return corroboration * 0.7 + recencyScore(age) * 0.3;
+  }
+
+  if (queryType === "current_state") {
+    // For current state: recency dominates
+    return corroboration * 0.3 + recencyScore(age) * 0.7;
+  }
+
+  // Default: balanced
+  return corroboration * 0.5 + recencyScore(age) * 0.5;
+}
+```
+
+## Cost Optimisation
+
+Hybrid pipelines optimise **cost** by using expensive methods only when needed:
+
+| Method | Per-Query Cost | Cold Start | Precision | Recall |
+|--------|---------------|-----------|-----------|--------|
+| Deterministic (Aho-Corasick) | ~0 | 0 | High (known terms) | Low (novel terms) |
+| Graph Traversal | ~0 | 0 | High (connected) | Medium |
+| Semantic Search | ~$0.01 | 2s | Medium | High |
+| KG Grounding | ~$0.001 | 0 | High | Medium |
+| LLM Re-ranking | ~$0.05 | 0 | High | High |
+
+The cascade pattern exploits this cost structure: start with the free methods, escalate only when confidence is low. In practice, 60-80% of queries in a well-built domain system can be handled by deterministic search alone, keeping per-query costs near zero.
+
+```javascript
+function estimateCost(queryBatch, router) {
+  let totalCost = 0;
+  const breakdown = { deterministic: 0, semantic: 0, grounded: 0 };
+
+  for (const query of queryBatch) {
+    const route = router.classify(query);
+    breakdown[route.strategy]++;
+
+    if (route.strategy === "semantic") totalCost += 0.01;
+    if (route.strategy === "grounded") totalCost += 0.011;
+  }
+
+  return { totalCost, breakdown, avgCost: totalCost / queryBatch.length };
+}
+```
+
+## Case Study: Terraphim + ProCoder Semantic Enrichment
+
+A concrete example of a hybrid pipeline in production: integrating Terraphim's graph embeddings with ProCoder AI Pack for automated file selection.
+
+### The Problem
+
+ProCoder uses manually defined glob patterns to select which files to include in LLM context:
+
+```toml
+# Manual file selection -- fragile and incomplete
+context_globs = ["src/auth/*.rs", "src/models/user.rs"]
+working_globs = ["src/api/login.rs"]
+```
+
+This works for simple tasks but breaks down when:
+- The developer does not know which files are relevant
+- Synonyms and related concepts span multiple directories
+- New files are added but glob patterns are not updated
+
+### The Hybrid Solution
+
+Replace manual globs with a Terraphim-driven semantic retrieval pipeline:
+
+```rust
+fn semantic_file_selection(prompt: &str, knowledge_graph: &KG) -> Vec<PathBuf> {
+    // Step 1: Extract key terms from the prompt
+    let key_terms = extract_terms(prompt);
+
+    // Step 2: Expand via Terraphim (deterministic, <1ms)
+    let expanded = terraphim_expand(&key_terms, knowledge_graph);
+    // "authentication" -> ["auth", "login", "credential", "session"]
+
+    // Step 3: Search the indexed codebase (deterministic, <1ms)
+    let matched_files = terraphim_search(&expanded, knowledge_graph);
+
+    // Step 4: Check for missed concepts (graph traversal)
+    let missed = check_concept_gaps(&matched_files, &key_terms, knowledge_graph);
+
+    // Step 5: Retrieve additional files for gaps (semantic fallback)
+    let gap_files = if !missed.is_empty() {
+        semantic_search_files(&missed)
+    } else {
+        vec![]
     };
-  }
-  
-  async routeGrounded(query) {
-    // Semantic search, then ground in KG
-    const semantic = await this.semantic.search(query);
-    const grounded = await this.grounding.validate(semantic);
-    return { 
-      results: grounded, 
-      method: "grounded",
-      latency: semantic.latency + grounded.latency
-    };
-  }
+
+    // Combine and return
+    [matched_files, gap_files].concat()
 }
 ```
 
-## Cost Optimization
+### Comparison: Manual vs Hybrid
 
-Hybrid pipelines optimize **cost** by using expensive methods only when needed:
+| Aspect | Manual Globs | Hybrid Pipeline |
+|--------|-------------|-----------------|
+| File Selection | User-defined patterns | Semantic via graph embeddings |
+| Synonym Handling | None (literal matches) | Automatic via KG synonym edges |
+| Related Terms | Manual addition | Graph traversal for expansion |
+| Missed Concepts | No detection | Graph gap analysis flags missing files |
+| Speed | Instant config | <2ms total (deterministic + graph) |
+| Maintenance | Manual updates per task | Self-adapting via KG |
 
-```javascript
-const costStructure = {
-  deterministic: { perQuery: 0, coldStart: 0 },
-  semantic: { perQuery: 0.01, coldStart: 2 },
-  grounding: { perQuery: 0.001, coldStart: 0 }
-};
-
-// Route based on value, not just capability
-function optimizeCost(queries) {
-  const optimized = queries.map(q => {
-    if (q.knownEntity) {
-      return { ...q, method: "deterministic" };
-    }
-    if (q.requiresAccuracy) {
-      return { ...q, method: "grounded" };
-    }
-    return { ...q, method: "semantic" };
-  });
-  
-  return optimized;
-}
-```
+The hybrid approach is not always better. For a simple, well-understood task, manual globs are faster to set up. But for complex queries that span multiple concerns, the hybrid pipeline consistently retrieves more complete context.
 
 ## Summary
 
-Hybrid pipelines combine:
-- Deterministic for known entities (fast, precise)
-- Semantic for open-ended (flexible)
-- Grounding for accuracy-critical (safe)
+Hybrid pipelines combine retrieval methods based on query characteristics:
 
-Key Sources: Terraphim hybrid architecture, RAG optimization
+- **Deterministic** for known vocabulary: fast, precise, free, explainable
+- **Graph traversal** for relationships: follows connections, no API cost
+- **Semantic** for novel queries: flexible, handles paraphrasing
+- **Grounding** for accuracy-critical queries: verifies against knowledge graph
+
+Three routing patterns serve different needs:
+- **Cascade**: try cheap first, escalate on low confidence (optimises cost)
+- **Fan-out**: run all methods in parallel, merge results (optimises recall)
+- **Semantic enrichment**: deterministic seed, then expand and fill gaps (optimises completeness)
+
+The field is evolving rapidly from basic RAG through GraphRAG and OntologyRAG towards self-describing stores and autonomous learning. The hybrid pipeline is the orchestration layer that makes this evolution practical -- routing each query to the retrieval strategy that serves it best.
+
+Key Sources: Terraphim hybrid architecture, TrustGraph context graph research, ProCoder AI Pack integration patterns, RAG optimisation literature

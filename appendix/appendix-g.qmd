@@ -1,7 +1,181 @@
 # Appendix G: Glossary
 
-*TODO: Write content*
+Key terms used throughout this book, organised alphabetically. Terms marked with (KG) appear in Terraphim knowledge graph synonym groups. Terms marked with (Ch N) reference the chapter where they are primarily defined.
 
-## Content
+## A
 
-TODO
+**Aho-Corasick Automaton** (Ch 7)
+: A finite-state pattern matching algorithm that finds all occurrences of a set of patterns in a single scan through the text. Used by Terraphim for deterministic term matching across millions of patterns in sub-millisecond time. Linear time complexity O(n) regardless of pattern count.
+
+**AI Sandwich** (Ch 22)
+: A firm structure where AI handles generation (measurable work), humans handle verification (unmeasurable work), and AI handles final polish. The middle layer does not scale, creating a structural bottleneck.
+
+**Artefact** (KG)
+: A versioned, reviewable output of a development process -- code, documents, configurations, domain models. In context engineering, artefacts include knowledge graphs, vocabularies, and skill definitions.
+
+## C
+
+**Cascade Pattern** (Ch 19)
+: A hybrid pipeline routing pattern that tries the cheapest retrieval method first and escalates to more expensive methods only when confidence is low. Optimises for cost.
+
+**CLAUDE.md** (Ch 13)
+: A project-level configuration file that defines rules, conventions, and context for AI coding assistants. Acts as persistent context that survives across sessions.
+
+**Codifier's Curse** (Ch 22)
+: The phenomenon where codifying expertise into AI systems destroys the tacit knowledge that was never explicitly documented. The system works until it encounters edge cases where that tacit knowledge mattered.
+
+**Compression** (Ch 11)
+: Techniques for reducing context size while preserving meaning. Includes summarisation, extraction, and structured representation.
+
+**Connectivity-Based Ranking** (Ch 7)
+: A scoring method where documents are ranked by the strength and number of their connections to query terms in the knowledge graph. More connections through typed relationships yield higher scores.
+
+**Context Drift** (Ch 14)
+: The gradual misalignment between a system's knowledge representation and the actual state of the domain. Types include vocabulary drift, assumption drift, relationship drift, and goal drift.
+
+**Context Engineering** (Ch 2)
+: The discipline of managing the information that AI systems use to generate responses. Encompasses knowledge representation, retrieval, validation, and governance.
+
+**Context Graph** (Ch 19)
+: A triples-representation of data optimised for usage with AI. Represents the next evolution beyond basic RAG, pulling from graph theory, semantic web standards, and ontology work.
+
+## D
+
+**Deterministic Search** (Ch 6)
+: Search where the same query always produces the same results. Contrasted with probabilistic/semantic search where results may vary.
+
+**Domain Model** (Ch 4)
+: A formal representation of the concepts, relationships, and rules within a specific problem domain. The foundation for knowledge graphs and context engineering.
+
+**Drift Detection** (Ch 14)
+: Monitoring for changes in context alignment over time. Includes vocabulary drift (new terms appearing), assumption drift (conventions changing), and relationship drift (connections shifting).
+
+## E
+
+**Embedding** (Ch 6)
+: A numerical vector representation of text, used for semantic similarity search. Terraphim's "graph embeddings" are deterministic alternatives that preserve full graph structure rather than compressing into vectors.
+
+**Ensemble Judging** (Ch 22)
+: Using multiple LLM judges and aggregating their scores to reduce single-model bias in automated evaluation.
+
+**Explainability** (Ch 7)
+: The ability to trace exactly why a search result was returned -- which terms matched, at what positions, through which synonym expansions, and along which relationship paths. A key advantage of deterministic search over vector similarity.
+
+## F
+
+**Fan-Out Pattern** (Ch 19)
+: A hybrid pipeline routing pattern that runs multiple retrieval methods in parallel and merges results. Documents found by multiple methods receive boosted scores. Optimises for recall.
+
+## G
+
+**Grounding** (Ch 9)
+: Verifying that AI-generated claims are supported by facts in the knowledge graph. A safety gate that prevents hallucination.
+
+**GraphRAG** (Ch 19)
+: An evolution of basic RAG that uses knowledge graph representations with rich relationships, moving beyond text chunks and semantic similarity.
+
+## H
+
+**Haystack** (KG)
+: In Terraphim, a collection of documents indexed for search. Each role can search across different haystacks (local folders, repositories, documentation).
+
+**Hook** (Ch 16)
+: A script or function that executes automatically in response to events (pre-commit, post-tool-use, etc.). Used to automate context validation, knowledge capture, and safety checks.
+
+**Hybrid Pipeline** (Ch 19)
+: A retrieval architecture that combines deterministic, semantic, and graph-based methods, routing queries to the most appropriate strategy based on their characteristics.
+
+## K
+
+**KLS (Knowledge Layer Schema)** (Ch 14)
+: A structured validation protocol for AI-generated content. Validates across conceptual, structural, technical, semantic, and style dimensions.
+
+**Knowledge Graph** (Ch 5)
+: A data model for organising knowledge as entities (nodes) connected by typed relationships (edges). Distinct from the database that stores it.
+
+## L
+
+**LLM-as-Judge** (Ch 22)
+: Using a large language model to evaluate the quality of AI-generated outputs against defined rubrics. Offers ~80% of human evaluation accuracy at ~1% of cost.
+
+## M
+
+**Measurability Bias** (Ch 22)
+: The tendency for AI automation to target tasks that are easy to verify, not necessarily tasks that are simple. Creates selection bias where measurable work is automated while unmeasurable but critical work is neglected.
+
+**Missing Junior Loop** (Ch 22)
+: The structural problem caused by AI automating junior engineering roles, which historically served as the training pipeline for developing senior expertise.
+
+## O
+
+**Ontology** (Ch 5)
+: A machine-readable specification of concepts, their hierarchies, and relationships. More formal than a vocabulary or taxonomy. Key standards include OWL and SKOS.
+
+**OntologyRAG** (Ch 19)
+: An evolution of GraphRAG that uses structured ontologies for precision, improved recall, and more granular retrieval.
+
+## P
+
+**Property Graph** (Ch 5, Ch 19)
+: A graph model where nodes and edges can have properties (key-value pairs). Used by Neo4j, Memgraph. Queried with Cypher. Contrasted with RDF triplestores.
+
+## R
+
+**RAG (Retrieval-Augmented Generation)** (Ch 19)
+: A technique where relevant documents are retrieved and included in an LLM prompt to ground responses in factual context.
+
+**RDF (Resource Description Framework)** (Ch 19)
+: A W3C standard for expressing data as subject-predicate-object triples. Uses URIs for global identification. Serialisation formats include Turtle, JSON-LD, and N-Triples.
+
+**Role-Based Graph** (Ch 7)
+: A knowledge graph where the same entities can have different synonym edges and relationships depending on the active context role. Enables the same term to mean different things in different contexts.
+
+**Rolegraph** (KG)
+: Terraphim's implementation of role-based graphs. Each rolegraph handles ingestion and ranking via Aho-Corasick automata, with search inference in 5-10 nanoseconds.
+
+## S
+
+**Semantic Enrichment Pipeline** (Ch 19)
+: A hybrid pattern that uses deterministic search to establish a precise foundation, then uses semantic methods to detect and fill conceptual gaps.
+
+**Skill** (Ch 12)
+: A self-contained capability that can be attached to an AI agent. Includes a prompt template, tool definitions, and context requirements.
+
+**Synonym Group** (Ch 7, Appendix D)
+: A set of terms that are treated as equivalent for search purposes. All terms in a group map to a single canonical concept via a shared group identifier.
+
+## T
+
+**Temporal Context** (Ch 19, Ch 22)
+: Information about when facts were established, how long they have been corroborated, and how their validity changes over time. Freshness and recency are not the same as accuracy and precision.
+
+**Thesaurus** (Appendix D)
+: In Terraphim, a JSON file mapping surface forms (searchable terms) to canonical concepts via synonym group identifiers. Each role has its own thesaurus.
+
+**Token Budget** (Ch 10)
+: The allocation strategy for distributing available context window tokens across system prompt, user context, retrieved documents, and generation space.
+
+**Triple** (Ch 5, Ch 19)
+: The fundamental unit of knowledge graph data: Subject-Predicate-Object. Predicates encode richer information than simple verb-based connections.
+
+## V
+
+**Validation Gate** (Ch 14)
+: A checkpoint where AI-generated content must pass quality criteria before progressing. Gates can be automated (CI/CD) or manual (human review).
+
+**Vector Embedding** (Ch 6)
+: A dense numerical representation of text in high-dimensional space. Used for approximate nearest-neighbour search. Contrasted with Terraphim's deterministic graph embeddings.
+
+**Verification Bottleneck** (Ch 22)
+: The fundamental economic constraint where verification costs grow faster than generation costs, creating pressure to deploy unverified AI outputs.
+
+**Vocabulary** (Ch 8)
+: A human-readable collection of defined terms for a domain. Less formal than an ontology, more structured than ad-hoc terminology.
+
+## Key Sources
+
+- Chapters 1-22 of this book
+- Appendix D: Knowledge Graph Schema (thesaurus format, synonym groups)
+- Terraphim AI technical documentation
+- SKOS (Simple Knowledge Organisation System) specification
+- "Some Simple Economics of AGI" (verification bottleneck terminology)

@@ -1,7 +1,162 @@
 # Appendix D: Knowledge Graph Schema
 
-*TODO: Write content*
+This appendix documents the schema formats used for knowledge graphs throughout this book, with concrete examples from the Terraphim knowledge graph configuration.
 
-## Content
+## Thesaurus Format
 
-TODO
+Terraphim uses a JSON-based thesaurus format for defining role-specific vocabularies. Each role gets its own thesaurus file, containing term-to-concept mappings with synonym group identifiers.
+
+```json
+{
+  "name": "Terraphim AI Developer",
+  "data": {
+    "learning": { "id": 1, "nterm": "knowledge" },
+    "knowledge": { "id": 1, "nterm": "knowledge" },
+    "lesson": { "id": 1, "nterm": "knowledge" },
+    "insight": { "id": 1, "nterm": "knowledge" },
+    "discovery": { "id": 1, "nterm": "knowledge" },
+    "setup": { "id": 2, "nterm": "configuration" },
+    "configuration": { "id": 2, "nterm": "configuration" },
+    "install": { "id": 2, "nterm": "configuration" },
+    "deployment": { "id": 2, "nterm": "configuration" },
+    "initialise": { "id": 2, "nterm": "configuration" }
+  }
+}
+```
+
+### Field Definitions
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | String | Role name -- determines which synonym set is active |
+| `data` | Object | Term-to-concept mapping |
+| `data[term]` | Object | A searchable term (surface form) |
+| `data[term].id` | Integer | Synonym group identifier -- terms with the same `id` are treated as synonyms |
+| `data[term].nterm` | String | Normalised term (canonical form) -- the concept this term maps to |
+
+### How Synonym Groups Work
+
+All terms sharing the same `id` are compiled into the same Aho-Corasick automaton pattern group. When any term in the group is matched, the system treats it as a match for the canonical `nterm`.
+
+Example: searching for "lesson" matches the `knowledge` concept (id: 1), which also matches documents containing "learning", "insight", or "discovery".
+
+## Role Definitions
+
+Each role specifies a focus area, embedding strategy, and search depth:
+
+| Role | Focus | Embeddings | Depth |
+|------|-------|-----------|-------|
+| Terraphim AI Developer | Rust-based AI assistant development | local | deep |
+| OpenClaw Developer | TypeScript gateway/agent platform | local | standard |
+| Last30Days Skill Developer | Web research skill development | none | basic |
+| System Operator | System administration and operations | none | minimal |
+| Learning Capture | Personal knowledge capture | local | deep |
+| Terraphim Engineer (Default) | General engineering | local | deep |
+
+### Role Configuration
+
+```yaml
+roles:
+  - name: "Terraphim AI Developer"
+    focus: "Rust-based AI assistant"
+    embeddings: local
+    depth: deep
+    thesaurus: "terraphim-ai-developer.json"
+    haystacks:
+      - path: "~/terraphim-ai"
+        type: "code"
+      - path: "~/.config/terraphim/docs"
+        type: "documentation"
+
+  - name: "System Operator"
+    focus: "System administration"
+    embeddings: none
+    depth: minimal
+    thesaurus: "system-operator.json"
+    haystacks:
+      - path: "/etc"
+        type: "config"
+```
+
+## Synonym Group Reference
+
+A production knowledge graph typically defines 15-25 synonym groups covering the domain vocabulary. The following groups illustrate the pattern:
+
+| ID | Canonical Term | Synonyms | Domain |
+|----|---------------|----------|--------|
+| 1 | Knowledge | learning, lesson, insight, discovery | General |
+| 2 | Configuration | setup, install, deployment, initialise | DevOps |
+| 3 | Git | gitea, github, repository, version control | SCM |
+| 4 | AI Assistant | terraphim, agent, claude, kimi | AI |
+| 5 | Tool | skill, capability, function, feature | Platform |
+| 6 | Storage | memory, persistence, database | Infrastructure |
+| 7 | Context Management | arscontexta, onecontext, context, progress | CE |
+| 8 | Retrieval | search, query, find, lookup | Search |
+| 9 | Failure | error, mistake, bug, issue, problem | Debugging |
+| 10 | Documentation | docs, guide, manual, readme | Docs |
+| 11-13 | Languages | Rust/Cargo, JavaScript/Node, Python | Languages |
+| 14 | Testing | test, spec, assertion, coverage | QA |
+| 15 | Security | auth, encryption, vulnerability, CVE | Security |
+| 16 | Performance | latency, throughput, optimisation, benchmark | Performance |
+| 17 | Build | compile, bundle, package, release | Build |
+| 18 | Execution | run, execute, invoke, spawn | Runtime |
+| 19 | Debugging | debug, trace, log, inspect, breakpoint | Debugging |
+| 20 | Repair | fix, patch, hotfix, workaround | Maintenance |
+
+## Graph Schema (Property Graph Format)
+
+For systems using property graphs (Neo4j, Memgraph), the following schema defines the node and relationship types:
+
+```cypher
+// Node types
+(:Concept {id: INT, label: STRING, definition: STRING})
+(:Term {surface_form: STRING, language: STRING})
+(:Document {path: STRING, type: STRING, last_modified: DATETIME})
+(:Role {name: STRING, focus: STRING, depth: STRING})
+
+// Relationship types
+(:Term)-[:IS_SYNONYM_OF {group_id: INT}]->(:Concept)
+(:Concept)-[:RELATES_TO {type: STRING, weight: FLOAT}]->(:Concept)
+(:Document)-[:MENTIONS {position: INT, count: INT}]->(:Concept)
+(:Role)-[:HAS_VOCABULARY]->(:Concept)
+(:Role)-[:SEARCHES]->(:Document)
+```
+
+## Graph Schema (RDF/Turtle Format)
+
+For systems using triplestores, the equivalent schema in Turtle notation:
+
+```turtle
+@prefix ce: <http://context-engineering.org/schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+ce:Concept a rdfs:Class ;
+    rdfs:label "A domain concept in the knowledge graph" .
+
+ce:Term a rdfs:Class ;
+    rdfs:label "A surface form (searchable text) for a concept" .
+
+ce:isSynonymOf a rdf:Property ;
+    rdfs:domain ce:Term ;
+    rdfs:range ce:Concept ;
+    rdfs:label "Maps a surface form to its canonical concept" .
+
+ce:relatesTo a rdf:Property ;
+    rdfs:domain ce:Concept ;
+    rdfs:range ce:Concept ;
+    rdfs:label "Semantic relationship between concepts" .
+
+ce:hasRole a rdf:Property ;
+    rdfs:domain ce:Concept ;
+    rdfs:range ce:Role ;
+    rdfs:label "Concept is part of a role-specific vocabulary" .
+```
+
+As discussed in Chapter 19, the choice between property graphs and triplestores is an implementation detail. Both representations encode the same semantic information. The important decisions are about the ontology quality, synonym coverage, and relationship completeness -- not the storage format.
+
+## Key Sources
+
+- Terraphim knowledge graph configuration (production implementation)
+- SKOS (Simple Knowledge Organisation System) specification
+- Neo4j graph data modelling documentation
+- RDF 1.1 Turtle specification

@@ -1,7 +1,140 @@
 # Appendix E: Context Health Checklist
 
-*TODO: Write content*
+This appendix provides a practical checklist for assessing the health of a context engineering system. Use it during periodic reviews (weekly or per-sprint) and at quality gates before major releases.
 
-## Content
+## Structural Health
 
-TODO
+These checks assess whether the foundational context artefacts are complete and consistent.
+
+### Domain Model
+
+- [ ] Domain model exists and is versioned
+- [ ] All key domain terms are defined with unambiguous definitions
+- [ ] Synonym groups are documented (term X = term Y in this context)
+- [ ] Relationships between concepts are explicitly typed (not just "related to")
+- [ ] Domain model has been reviewed by a domain expert (not just the engineer who wrote it)
+- [ ] No orphan terms (terms defined but not used in any artefact)
+- [ ] No undefined terms (terms used in artefacts but not in the domain model)
+
+### Knowledge Graph
+
+- [ ] Knowledge graph is populated and queryable
+- [ ] Term coverage: >80% of domain model terms appear in the KG
+- [ ] Synonym coverage: key terms have at least 2-3 synonyms defined
+- [ ] Relationship coverage: key entity pairs have typed relationships
+- [ ] Role-based graphs are configured for each active context role
+- [ ] KG build time is acceptable (<1s for graphs under 100K terms)
+- [ ] Search results are deterministic (same query returns same results)
+
+### Vocabulary
+
+- [ ] Vocabulary file exists and is maintained
+- [ ] Industry-standard terms are included (not just internal jargon)
+- [ ] Acronyms are expanded in the vocabulary
+- [ ] Vocabulary is validated against actual usage in codebase/documents
+
+## Operational Health
+
+These checks assess whether the context system is functioning correctly in production.
+
+### Retrieval Quality
+
+- [ ] Retrieval accuracy is measured (% of queries returning relevant results)
+- [ ] Precision at top-5 results is tracked
+- [ ] Zero-result queries are logged and investigated
+- [ ] Retrieval latency is within acceptable bounds (<100ms for deterministic, <2s for semantic)
+
+### Context Freshness
+
+- [ ] Knowledge graph was updated within the last sprint/iteration
+- [ ] No stale entries (documents referenced but no longer existing)
+- [ ] New code/documents added since last KG update are identified
+- [ ] Temporal metadata (last_updated, source_date) is present on KG entries
+
+### Drift Detection
+
+- [ ] Baseline context snapshot exists
+- [ ] Drift is measured at regular intervals
+- [ ] Vocabulary drift: new terms appearing in usage that are not in the KG
+- [ ] Assumption drift: conventions established in recent sessions that contradict earlier ones
+- [ ] Relationship drift: entity connections that have changed meaning
+- [ ] Drift threshold triggers are defined (e.g., >15% = warning, >30% = critical)
+
+## Governance Health
+
+These checks assess whether the context management process is sound.
+
+### Change Management
+
+- [ ] Context changes are tracked (who changed what, when, why)
+- [ ] Impact analysis is performed before significant changes
+- [ ] Changes to the domain model require review/approval
+- [ ] Vocabulary additions follow a defined process (not ad-hoc)
+
+### Quality Gates
+
+- [ ] Pre-LLM validation is automated (syntax, semantics, grounding)
+- [ ] Post-LLM validation checks outputs against KG
+- [ ] Gate pass rates are tracked over time
+- [ ] Failed gates produce actionable feedback (not just "FAILED")
+
+### Documentation
+
+- [ ] Context architecture is documented (which systems, how they connect)
+- [ ] KG schema is documented (node types, relationship types, properties)
+- [ ] Role definitions are documented (who uses which vocabulary)
+- [ ] Runbook exists for common context operations (rebuild KG, add terms, fix drift)
+
+## Agent-Specific Health
+
+These checks apply when AI agents are consuming the context.
+
+### Agent Context Configuration
+
+- [ ] Each agent role has a defined context scope (what it can see)
+- [ ] System prompts reference the knowledge graph for grounding
+- [ ] CLAUDE.md (or equivalent) is maintained and current
+- [ ] Skill definitions include context requirements
+- [ ] Token budget is defined and monitored per agent
+
+### Multi-Agent Coherence
+
+- [ ] Shared vocabulary is consistent across agents
+- [ ] Handover documents are generated between agent sessions
+- [ ] No contradictory conventions established by different agents
+- [ ] Agent outputs are validated against the shared domain model
+
+### Feedback Loop
+
+- [ ] Failed agent actions are captured for learning
+- [ ] Agent queries with zero results are logged
+- [ ] Context gaps discovered by agents are fed back to the KG
+- [ ] Agent performance metrics are tracked over time
+
+## Scoring Guide
+
+For each section, count the number of checked items and calculate a percentage:
+
+| Score | Status | Action |
+|-------|--------|--------|
+| 90-100% | Healthy | Continue monitoring |
+| 70-89% | Adequate | Address gaps in next sprint |
+| 50-69% | At Risk | Prioritise context improvements |
+| Below 50% | Critical | Stop feature work, fix context foundations |
+
+## Recommended Review Cadence
+
+| Check Category | Frequency | Typical Duration |
+|---------------|-----------|-----------------|
+| Retrieval quality spot-check | Daily (automated) | 0 min (CI/CD) |
+| Drift detection | Weekly (automated) | 0 min (scheduled) |
+| Full structural health | Per sprint | 30-60 min |
+| Full governance review | Monthly | 1-2 hours |
+| Agent coherence audit | Per major release | 2-4 hours |
+
+## Key Sources
+
+- Chapter 14: Validation and Quality Gates (KLS protocol, drift detection)
+- Chapter 18: Enterprise Context Governance (gated lifecycle, health metrics)
+- Chapter 7: Terraphim Graph Embeddings (deterministic search properties)
+- Chapter 15: Multi-Agent Context Management (coherence patterns)

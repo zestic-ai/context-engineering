@@ -1,8 +1,10 @@
-# Chapter 7: Terraphim Graph Embeddings: The 100% Accurate Approach
+# Chapter 7: Terraphim Graph Embeddings: Deterministic Search with Full Explainability
 
-In the previous chapter, we compared deterministic search to vector embeddings and established that deterministic approaches win on precision, explainability, and cost. Now we dive deep into Terraphim's specific implementation: **graph embeddings** that achieve 100% accuracy for known terms.
+In the previous chapter, we compared deterministic search to vector embeddings and established that deterministic approaches win on precision, explainability, and cost. Now we dive deep into Terraphim's specific implementation: **graph embeddings** that achieve deterministic precision and full explainability for vocabulary-matched terms.
 
 The key insight is that instead of compressing knowledge into vectors (which loses information), Terraphim preserves the full graph structure and adds a deterministic scoring layer on top.
+
+An important scope clarification: Terraphim delivers 100% precision and recall *for terms that exist in its vocabulary*. This is not a trivial achievement -- it means zero false positives and zero missed matches within the known domain. But it is also not magic: the challenge is not accuracy for known terms, it is **coverage for unknown terms**. When a query uses terminology outside the vocabulary, Terraphim cannot match it. Chapter 19 addresses this limitation through hybrid pipelines that combine deterministic search with semantic methods for novel queries.
 
 ## Explicit Relationships vs Inferred Similarity
 
@@ -225,6 +227,98 @@ Vector similarity tries to capture "overall similarity" in a single number. But 
 
 Which is more relevant? Vector similarity might give similar scores. Terraphim's connectivity scoring can distinguish this because it weights by relationship type and depth.
 
+## Integration with ProCoder for Semantic File Retrieval
+
+A concrete application of Terraphim's graph embeddings is integrating them with tools that manage LLM context files. ProCoder AI Pack uses manually defined glob patterns to select which files to include in LLM context:
+
+```toml
+# Manual file selection -- fragile and incomplete
+context_globs = ["src/auth/*.rs", "src/models/user.rs"]
+working_globs = ["src/api/login.rs"]
+```
+
+This works for simple tasks but breaks down when the developer does not know which files are relevant, when synonyms span multiple directories, or when new files are added but glob patterns are not updated.
+
+### The Semantic Retrieval Pipeline
+
+Replace manual globs with a Terraphim-driven pipeline:
+
+```rust
+fn semantic_file_selection(prompt: &str, knowledge_graph: &KG) -> Vec<PathBuf> {
+    // Step 1: Extract key terms from the prompt
+    let key_terms = extract_terms(prompt);
+
+    // Step 2: Expand via Terraphim (deterministic, <1ms)
+    let expanded = terraphim_expand(&key_terms, knowledge_graph);
+    // "authentication" -> ["auth", "login", "credential", "session"]
+
+    // Step 3: Search the indexed codebase (deterministic, <1ms)
+    let matched_files = terraphim_search(&expanded, knowledge_graph);
+
+    // Step 4: Check for missed concepts (graph traversal)
+    let missed = check_concept_gaps(&matched_files, &key_terms, knowledge_graph);
+
+    // Step 5: Retrieve additional files for gaps (semantic fallback)
+    let gap_files = if !missed.is_empty() {
+        semantic_search_files(&missed)
+    } else {
+        vec![]
+    };
+
+    // Combine and return
+    [matched_files, gap_files].concat()
+}
+```
+
+### Comparison: Manual vs Semantic
+
+| Aspect | Manual Globs | Terraphim-Enhanced |
+|--------|-------------|--------------------|
+| File selection | User-defined patterns | Semantic via graph embeddings |
+| Synonym handling | None (literal matches) | Automatic via KG synonym edges |
+| Related terms | Manual addition | Graph traversal for expansion |
+| Missed concepts | No detection | Graph gap analysis flags missing files |
+| Speed | Instant config | <2ms total (deterministic + graph) |
+| Maintenance | Manual updates per task | Self-adapting via KG |
+
+The semantic approach is not always better. For a simple, well-understood task, manual globs are faster to set up. But for complex queries that span multiple concerns, the Terraphim pipeline consistently retrieves more complete context.
+
+## Role-Based Configuration in Practice
+
+The role-based graph concept described earlier is not theoretical -- it is implemented in production configurations. A concrete example from Terraphim's knowledge graph configuration repository defines six distinct roles:
+
+| Role | Focus | Synonym Groups |
+|------|-------|---------------|
+| Terraphim AI Developer | Rust-based AI assistant development | Deep: all 20 groups |
+| OpenClaw Developer | TypeScript gateway/agent platform | Standard: 15 groups |
+| Last30Days Skill Developer | Web research skill development | Basic: 8 groups |
+| System Operator | System administration and operations | Minimal: 5 groups |
+| Learning Capture | Personal knowledge management | Deep: all 20 groups |
+| Terraphim Engineer (Default) | General engineering | Deep: all 20 groups |
+
+Each role has its own thesaurus -- a JSON file mapping terms to synonym groups:
+
+```json
+{
+  "name": "Terraphim AI Developer",
+  "data": {
+    "terraphim": { "id": 4, "nterm": "ai_assistant" },
+    "claude": { "id": 4, "nterm": "ai_assistant" },
+    "kimi": { "id": 4, "nterm": "ai_assistant" },
+    "agent": { "id": 4, "nterm": "ai_assistant" },
+    "rust": { "id": 11, "nterm": "rust_language" },
+    "cargo": { "id": 11, "nterm": "rust_language" },
+    "search": { "id": 8, "nterm": "retrieval" },
+    "query": { "id": 8, "nterm": "retrieval" },
+    "lookup": { "id": 8, "nterm": "retrieval" }
+  }
+}
+```
+
+When the role switches from "Terraphim AI Developer" to "System Operator", the Aho-Corasick automaton is rebuilt (in ~20ms) with the new role's synonym groups. The same query produces different expansions depending on which role is active -- exactly the context-sensitive behaviour that enterprise AI systems require.
+
+The 20 synonym groups cover: Knowledge, Configuration, Git, AI Assistant, Tool, Storage, Context Management, Retrieval, Failure, Documentation, Rust, JavaScript, Python, Testing, Security, Performance, Build, Execution, Debugging, and Repair. Each group maps multiple surface forms to a single canonical concept, enabling the deterministic precision described in this chapter. Appendix D provides the full schema reference.
+
 ## Summary: The Terraphim Approach
 
 Terraphim provides a fundamentally different approach to AI search:
@@ -242,7 +336,7 @@ This is not a replacement for all AI approaches. But for the 80% of queries wher
 ## Key Sources
 
 - Terraphim AI technical documentation and implementation
-- Aho-Corasick algorithm (1975) — original paper
-- MedGemma competition results (demonstrating 100% grounding)
-- Terraphim role-based graph configuration patterns
-- CTO Executive System knowledge graph implementation
+- Aho-Corasick algorithm (1975) -- original paper
+- MedGemma competition results (demonstrating deterministic grounding)
+- Terraphim role-based graph configuration patterns (kimiko-terraphim-kg-config)
+- ProCoder AI Pack documentation and integration patterns

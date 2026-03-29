@@ -6,7 +6,7 @@ This chapter presents validation as a layered system: **pre-LLM validation** cat
 
 ## KLS (Knowledge Layer Schema) Validation Protocol
 
-**KLS** (Knowledge Layer Schema) is a structured validation protocol for AI-generated content. It provides a framework for reviewing, validating, and approving any significant AI output.
+**KLS** (Knowledge Layer Schema) is a custom validation protocol developed for the context engineering workflow described in this book. It is not an industry standard -- rather, it is a structured approach to reviewing, validating, and approving AI-generated content that you can adapt for your own projects.
 
 ### What KLS Validates
 
@@ -28,6 +28,8 @@ meta:
   manuscript_title: "Context Engineering Book"
   reviewer: { name: "Reviewer", role: "peer_reviewer" }
   review_date: "2026-03-28"
+  review_type: "technical"  # technical | editorial | compliance
+  status: "in_progress"     # in_progress | complete | needs_revision
 
 conceptual_model:
   core_claim_one_sentence: "Context engineering is the missing discipline..."
@@ -363,21 +365,106 @@ npm run validate:kls
 npm run detect:drift
 ```
 
+## LLM as a Judge for Context Validation
+
+The validation layers above are deterministic -- they check computable properties like syntax, schema conformance, and graph coverage. But some quality dimensions resist deterministic checking: Is the output *helpful*? Is it *complete*? Does it *correctly address* the user's intent?
+
+**LLM-as-Judge evaluation** uses a separate LLM (distinct from the generator) to score outputs against defined rubrics. This fills the gap between deterministic checks and full human review.
+
+### Four Evaluation Modes
+
+| Mode | Description | Best For |
+|------|-------------|----------|
+| **Pointwise** | Score a single response in isolation | Quality assessment, moderation |
+| **Reference-based** | Compare to a known good answer | Accuracy, regression testing |
+| **Pairwise** | Pick the better of two responses | A/B testing, preference data |
+| **Listwise** | Rank multiple responses | Leaderboards, best-of-N selection |
+
+Reference-based evaluation is the most reliable mode when ground truth exists. Pointwise evaluation (scoring without a reference) is the least reliable and should be avoided for quality gates.
+
+### Known Biases
+
+LLM judges introduce systematic biases that must be mitigated:
+
+| Bias | Description | Mitigation |
+|------|-------------|------------|
+| **Position bias** | Favours the first response shown (10-20% swing in pairwise) | Run comparisons twice with swapped positions |
+| **Verbosity bias** | Longer responses score higher regardless of quality | Include length-penalised scoring criteria |
+| **Self-enhancement bias** | Models prefer outputs matching their own style | Use a different model family for judging than for generation |
+| **Authority bias** | Confident responses score higher even when hedging is appropriate | Require evidence citations in judge reasoning |
+| **Format bias** | Well-formatted responses (markdown, bullets) score higher | Evaluate content separately from presentation |
+
+### The Hybrid Verification Pipeline
+
+The recommended approach combines deterministic and LLM-based validation:
+
+```javascript
+async function hybridValidation(content, knowledgeGraph, rubric) {
+  // Layer 1: Deterministic checks (free, instant)
+  const syntaxResult = validateSyntax(content);
+  const groundingResult = validateGrounding(content, knowledgeGraph);
+
+  if (!syntaxResult.passed || !groundingResult.passed) {
+    return { passed: false, stage: "deterministic", results: { syntaxResult, groundingResult } };
+  }
+
+  // Layer 2: LLM-as-Judge for nuance (costs per evaluation)
+  const judgeResult = await llmJudge(content, rubric, {
+    mode: "reference_based",
+    model: "different_from_generator",
+    requireReasoning: true
+  });
+
+  if (judgeResult.score < rubric.minimumScore) {
+    return { passed: false, stage: "llm_judge", results: judgeResult };
+  }
+
+  // Layer 3: Sampling for human calibration (5-10% of evaluations)
+  if (shouldSampleForHumanReview()) {
+    queueForHumanReview(content, judgeResult);
+  }
+
+  return { passed: true, results: { syntaxResult, groundingResult, judgeResult } };
+}
+```
+
+### Calibration Against Human Judgement
+
+Before deploying LLM judges in production, calibrate against 100-200 human-annotated examples. Measure:
+
+- **Correlation**: Does the LLM ranking match human ranking?
+- **Cohen's Kappa**: Agreement beyond what chance would produce?
+- **Systematic bias**: Does the judge consistently score higher or lower than humans?
+
+If disagreement exceeds 20-30%, revisit the rubric or switch judge models. LLM judges drift as models update, so recalibration is not a one-time activity -- it is ongoing maintenance.
+
+### When NOT to Use LLM Judges
+
+Use deterministic validation instead when:
+
+- **Ground truth exists**: Maths, code execution, structured output -- use computable checks
+- **Safety-critical decisions**: Content moderation, medical -- use as one signal among many with mandatory human review
+- **High volume, low stakes**: Millions of responses where simpler classifiers are more cost-effective
+
+LLM-as-Judge is most valuable in the middle ground: outputs that are too nuanced for rule-based checks but too numerous for full human review.
+
 ## Summary: Validation as Gate
 
 Validation transforms AI generation from "trust me" to "prove it":
 
-1. **KLS protocol**: Structured validation across conceptual, structural, technical dimensions
+1. **KLS protocol**: Custom structured validation across conceptual, structural, technical dimensions
 2. **Pre-LLM validation**: Catch syntax, semantics, grounding issues before generation
 3. **Drift detection**: Monitor context changes over time, trigger rebaselining
-4. **Impact analysis**: Know what changes affect what
-5. **CI/CD integration**: Automate validation in pipelines
+4. **LLM-as-Judge**: Automated evaluation for nuanced quality dimensions, with bias mitigation
+5. **Impact analysis**: Know what changes affect what
+6. **CI/CD integration**: Automate validation in pipelines
 
 These gates ensure that AI outputs meet standards before they reach users.
 
 ## Key Sources
 
-- KLS Schema Reference (cto-executive-system/docs/)
+- KLS Schema Reference (custom validation protocol)
 - Claude Code hooks and automation
 - Context engineering validation patterns
+- LLM-as-Judge best practices literature (Zheng et al., MT-Bench; Huyen, AI Engineering, 2025)
 - Drift detection literature

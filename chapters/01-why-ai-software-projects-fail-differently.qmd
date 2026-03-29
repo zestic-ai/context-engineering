@@ -22,7 +22,7 @@ This model underpins decades of software engineering methodology. Agile, Waterfa
 
 AI software introduces a fundamentally different failure mode: **context drift**.
 
-In AI systems, "context" encompasses everything the model uses to generate outputs: the prompt, the accumulated conversation, the retrieved documents, the embedded knowledge, the configuration parameters, and the implicit assumptions that the system operates under. Unlike code, context is not version-controlled in any meaningful way. It shifts subtly with every interaction, every retrieval, every model update.
+In AI systems, "context" has two distinct layers. **Runtime context** is everything injected at inference time: the prompt, the accumulated conversation, the retrieved documents, the system instructions, and the configuration parameters. **Training context** is baked into the model itself: the weights learned from training data, fine-tuning adjustments, and embedded knowledge. This book focuses primarily on runtime context -- the layer you can engineer, version, and validate. But training context matters too: when training data contains errors (like the 800mg dosage), no amount of runtime context engineering can fully compensate. Unlike code, neither layer of context is version-controlled in any meaningful way. Both shift -- runtime context with every interaction and retrieval, training context with every model update.
 
 **Context drift** is the gradual misalignment between what the AI system understands and what the operators intend. It is not a single error—it is the compound effect of thousands of micro-misalignments that accumulate invisibly.
 
@@ -32,9 +32,9 @@ This is the first way AI fails differently: **the failures are not errors—they
 
 ### Enter Context Engineering
 
-In 2025, Turkhanov of Zestic AI articulated what many practitioners had suspected but couldn't name: **context engineering is the missing discipline of software architecture**. The core insight is that while code complexity is technical and manageable through modularization, context complexity is semantic—shaped by assumptions, stakeholder interpretations, evolving business models, and shifting objectives.
+In 2025, practitioners at Zestic AI articulated what many had suspected but could not name: **context engineering is the missing discipline of software architecture**. The core insight is that while code complexity is technical and manageable through modularisation, context complexity is semantic -- shaped by assumptions, stakeholder interpretations, evolving business models, and shifting objectives.
 
-The Zestic AI framework identifies key failure patterns in enterprise AI programs:
+The Zestic AI framework identifies key failure patterns in enterprise AI programmes:
 
 - **Stakeholders reinterpret goals downstream** — what was agreed in discovery becomes something different in development
 - **Account teams commit to outcomes before feasibility validation** — commercial urgency overrides engineering baselines
@@ -126,6 +126,35 @@ Constraints are the safety gates. Without explicit constraints, the AI system ca
 
 **These fundamentals are applied in Chapter 8**, where we build a knowledge graph using exactly these concepts: entities from the domain model, relationships between them, and constraints that the AI must respect.
 
+## The Verification Bottleneck
+
+There is a deeper structural problem beneath context drift and hallucination: **verification does not scale at the same rate as generation**.
+
+### The Economics
+
+AI generation is becoming exponentially cheaper. An LLM can produce 1,000 lines of code in an hour. But human review of that code requires days of careful analysis. The pressure to ship leads to superficial verification. Subtle bugs accumulate as hidden technical debt.
+
+This creates what economists call the "AI sandwich" firm structure (Korinek and Suh, 2025): AI does the measurable generation, humans do the unmeasurable verification, AI does the final polish. But the middle layer -- human verification -- does not scale. At some point, it becomes economically rational to deploy unverified AI outputs. The result is accumulating systemic risk: failures that are statistically invisible until they are catastrophic.
+
+### The Missing Junior Loop
+
+Historically, junior engineers served as a training pipeline: they did measurable work (write code, run tests, fix bugs), seniors reviewed their output, and through that review cycle, juniors developed the judgement to become seniors. AI agents are now filling the junior role -- generating code at scale, running tests, fixing linting errors.
+
+But the review cycle that trained seniors has no equivalent in AI-assisted workflows. When a junior engineer writes code, a senior reviews it and provides feedback. When an AI generates 1,000 lines of code in an hour, no human can review it at that pace. The pipeline that creates expertise is under pressure.
+
+### Why This Matters for Context Engineering
+
+The verification bottleneck is the economic argument for why context engineering is not optional. Without structured context -- knowledge graphs, validation gates, deterministic checks -- you are relying entirely on human review to catch AI errors. And human review does not scale.
+
+Context engineering provides the infrastructure that makes verification tractable:
+
+- **Knowledge graphs** enable deterministic fact-checking (Chapter 5)
+- **Validation gates** catch errors before they reach production (Chapter 14)
+- **Controlled vocabularies** reduce the surface area that needs review (Chapter 8)
+- **Hybrid pipelines** route queries to the cheapest reliable method (Chapter 19)
+
+The rest of this book is, fundamentally, about building verification infrastructure that scales alongside AI generation. Without it, the verification bottleneck becomes a business-critical risk.
+
 ## Summary: The New Failure Landscape
 
 AI software fails differently because:
@@ -142,6 +171,7 @@ In the next chapter, we will define what "context" actually means in AI developm
 
 ## Key Sources
 
-- Turkhanov, "Context Engineering: The Missing Discipline" (Zestic AI, 2025)
+- Zestic AI, "Context Engineering: The Missing Discipline" (2025)
+- Korinek and Suh, "Some Simple Economics of AGI" (verification bottleneck analysis)
 - Armin Ronacher, "Agent Design Is Still Hard"
 - MedGemma competition case study
