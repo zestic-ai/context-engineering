@@ -12,7 +12,7 @@ In traditional software projects, we produce documentation: requirements documen
 
 In Context Engineering, artefacts are different. An **artefact is a container for a decision** — what was decided, why, what alternatives were considered, and what the implications are. This shifts the purpose from recording to **enforcing**.
 
-The analogy is logistics: a shipping container doesn't just hold cargo — it moves through workflows, gets tracked, is processed by systems. Its contents change, and those changes are logged. Similarly, an artefact moves through the project lifecycle, gets processed by AI systems, and enforces constraints.
+The analogy is logistics: a shipping container moves through workflows, is tracked at every port, and is processed by systems that read its manifest and enforce routing rules. The container is not passive storage -- it is a unit of work that the logistics system acts on. Similarly, an artefact moves through the project lifecycle, gets processed by AI systems, and enforces constraints. The manifest is the metadata; the ports are the stage gates; the routing rules are the validation checks.
 
 Consider an API specification. As a traditional document, it says "the API accepts these parameters." As a decision container, it says:
 
@@ -31,7 +31,10 @@ In practice, decision containers can be implemented as structured files with exp
 decision:
   id: D-2025-042
   date: 2025-03-15
+  type: architectural    # architectural | design | operational
+  status: approved       # draft | proposed | approved | superseded
   title: Order API accepts composite IDs
+  author: engineering-lead
   alternatives_considered:
     - separate_order_id_and_product_id: rejected due to client complexity
     - uuid_only: rejected due to legacy system compatibility
@@ -39,6 +42,7 @@ decision:
     - requires composite ID parser
     - affects order service and fulfillment service
   traced_to: domain-model.yaml#entities.order
+  supersedes: null       # ID of previous decision, if any
 ```
 
 This structured approach is what enables the "configuration manager AI agent" concept from the Zestic framework — an AI that can process, validate, and reason over artefacts because they contain machine-readable decisions.

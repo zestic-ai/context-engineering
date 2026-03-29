@@ -8,6 +8,8 @@ This chapter introduces **token budget architecture** — a systematic approach 
 
 A practical rule of thumb: **allocate no more than 12,000 tokens for active context** (out of typical 128K-200K windows). This leaves headroom for the LLM's output and system overhead.
 
+Why 12,000? While modern context windows support 128K-200K tokens, research consistently shows that LLM response quality degrades with excessive context. The 12K figure is a working guideline derived from practical experience with Claude Code and similar agent systems -- it provides enough room for 2-3 active skills, conversation history, and working context while keeping the signal-to-noise ratio high. Adjust based on your model and use case, but start conservative.
+
 But this raises a challenge: how do you fit everything you need into 12K tokens while maintaining quality?
 
 ### The Problem: Flat Context Loading
@@ -26,7 +28,7 @@ This exceeds limits immediately, and naive truncation loses critical information
 
 Applied to context:
 
-1. **Startup**: Load only skill names (~50 tokens)
+1. **Startup**: Load only skill names (~200-300 tokens)
 2. **On trigger**: Load full skill content (~1000 tokens per skill)
 3. **On compression**: Reduce to essentials before LLM call (~2000 tokens per skill)
 4. **On demand**: Load additional context when specifically requested
@@ -65,7 +67,7 @@ The context optimizer implements a **three-layer architecture**:
 At startup, load only skill names and triggers:
 
 ```yaml
-# Skill catalog: ~50 tokens for 20 skills
+# Skill catalog: ~200-300 tokens for 20 skills
 skills:
   web-search:
     name: web-search
@@ -80,7 +82,7 @@ skills:
     estimated_tokens: 1200
 ```
 
-**Token cost**: ~50 tokens total (vs ~16,000 for full content)
+**Token cost**: ~200-300 tokens total (vs ~16,000 for full content)
 
 ### Layer 2: Active Skills (Full Content)
 

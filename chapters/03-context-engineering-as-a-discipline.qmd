@@ -16,7 +16,7 @@ This is necessary but insufficient. Prompt engineering treats context as a singl
 
 ### Not "Vibe Coding"
 
-At the other extreme is what some call **"vibe coding"** — the approach of iterating on AI systems by intuition, trusting that the model will "just figure it out." This is the approach of least resistance: try something, see what happens, adjust based on feel.
+At the other extreme is what Andrej Karpathy termed **"vibe coding"** (February 2025) — the approach of iterating on AI systems by intuition, trusting that the model will "just figure it out." This is the approach of least resistance: try something, see what happens, adjust based on feel.
 
 This approach fails for the reasons established in Chapter 1. The failures are invisible and cumulative. What feels right today may produce subtle misalignment that compounds over weeks. Without explicit structure, there is no way to detect drift, no way to validate alignment, and no way to rollback to a known-good state.
 
@@ -60,9 +60,39 @@ The oldest root is **configuration management** — the practice of controlling 
 
 In AI, configuration expands to include prompts, knowledge bases, model parameters, retrieval configurations, and validation rules. Context Engineering applies configuration management principles to this expanded scope.
 
+## Operational Discipline: The Karpathy Guidelines
+
+While Context Engineering provides the structural framework, day-to-day execution requires operational discipline. Andrej Karpathy's LLM coding guidelines (2025) articulate four principles that translate directly to context engineering practice:
+
+### 1. Think Before Coding
+
+> "Don't assume. Don't hide confusion. Surface tradeoffs."
+
+Before generating any AI output, validate that the context is complete and unambiguous. State assumptions explicitly. When requirements are ambiguous, present multiple interpretations rather than silently choosing one. This mirrors the pre-LLM validation described in Chapter 14: catch problems before the model runs.
+
+### 2. Simplicity First
+
+> "Minimum code that solves the problem. Nothing speculative."
+
+Apply to context as well as code. A 500-entity knowledge graph with precise relationships outperforms a 5,000-entity graph with vague ones. Every element in the context window should earn its tokens. Remove speculative context -- information included "just in case" -- because it dilutes the signal and consumes budget.
+
+### 3. Surgical Changes
+
+> "Touch what is needed, nothing more."
+
+When updating knowledge graphs, prompts, or validation rules, change only what the task requires. Broad refactoring of context introduces drift risk. Small, targeted changes are easier to validate and rollback.
+
+### 4. Goal-Driven Execution
+
+> "Start from the goal. Always know where you are."
+
+Every context engineering decision should trace back to a measurable objective. If you cannot explain why a piece of context exists and what goal it serves, it is a candidate for removal. This connects to the Zestic AI framework's artefact governance: every artefact is a decision container with a traceable purpose.
+
+These four principles are not abstract philosophy. They are operational checks that prevent the structural debt described later in this chapter.
+
 ## The Zestic AI Framework
 
-The most complete articulation of Context Engineering comes from Turkhanov's Zestic AI framework. It provides a structured approach with several key components:
+The most complete articulation of Context Engineering comes from the Zestic AI framework. It provides a structured approach with several key components:
 
 ### The Reconciled Domain Model
 
@@ -138,6 +168,7 @@ The cost of ignoring it is structural debt that compounds over time. This makes 
 
 ## Key Sources
 
-- Turkhanov, "Context Engineering: The Missing Discipline" (Zestic AI, 2025)
+- Zestic AI, "Context Engineering: The Missing Discipline" (2025)
 - Eric Evans, "Domain-Driven Design" (2003)
+- Andrej Karpathy, "LLM Coding Guidelines" (2025) and "vibe coding" concept (February 2025)
 - Systems engineering literature on configuration management (1960s)

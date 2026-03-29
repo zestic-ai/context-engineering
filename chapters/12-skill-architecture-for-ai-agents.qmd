@@ -2,30 +2,30 @@
 
 In the previous chapter, we saw how compression strategies manage context when limits are exceeded. Now we address the foundation those strategies work with: **skill architecture** — how skills are structured, named, and loaded to support progressive disclosure and compression.
 
-## Lightweight Skill Catalogs (~50 Tokens at Startup)
+## Lightweight Skill Catalogs (~200-300 Tokens at Startup)
 
 The skill catalog is the minimal representation loaded at startup. It should be **tiny** — just enough information to make activation decisions.
 
 ### Catalog Structure
 
 ```yaml
-# Skill catalog: ~50 tokens for 20 skills
+# Skill catalog: ~200-300 tokens for 20 skills
 skills:
   - name: web-search
     triggers: ["search", "web", "find", "lookup", "google"]
     tier: standard
     estimated_tokens: 800
-    
+
   - name: terraphim-memory
     triggers: ["memory", "recall", "remember", "kg", "knowledge"]
     tier: core
     estimated_tokens: 1200
-    
+
   - name: file-editor
     triggers: ["edit", "modify", "change", "update", "write"]
     tier: core
     estimated_tokens: 600
-    
+
   - name: code-runner
     triggers: ["run", "execute", "command", "bash", "shell"]
     tier: standard
@@ -37,12 +37,13 @@ skills:
 | Component | Tokens | Purpose |
 |-----------|--------|---------|
 | Skill name | 1-2 per skill | Identifier |
-| Triggers | 2-5 per skill | Activation keywords |
-| Tier | 1 per skill | Priority flag |
-| Est. tokens | 1 per skill | Budget planning |
-| **Total (20 skills)** | **~50** | **Startup cost** |
+| Triggers | 5-10 per skill | Activation keywords (including YAML syntax) |
+| Tier | 1-2 per skill | Priority flag |
+| Est. tokens | 1-2 per skill | Budget planning |
+| YAML structure | 3-5 per skill | Keys, colons, brackets |
+| **Total (20 skills)** | **~200-300** | **Startup cost** |
 
-This is dramatically cheaper than loading full skill content (~16,000 tokens for 20 skills).
+The actual token count depends on the tokeniser and YAML formatting overhead. Even at 300 tokens, this is dramatically cheaper than loading full skill content (~16,000 tokens for 20 skills).
 
 ## On-Demand Activation Patterns: Trigger-Based Loading
 
@@ -313,7 +314,7 @@ skill:
 
 Skill architecture provides the foundation for context management:
 
-1. **Lightweight catalog**: ~50 tokens at startup
+1. **Lightweight catalog**: ~200-300 tokens at startup
 2. **Trigger-based activation**: Load only when needed
 3. **Auto-deactivation**: Evict after 10 turns of non-use
 4. **Maximum 5 active**: Enforce hard limit for quality

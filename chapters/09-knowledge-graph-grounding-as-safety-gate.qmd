@@ -6,11 +6,11 @@ The MedGemma competition case study demonstrates this powerfully: a knowledge gr
 
 ## The MedGemma Competition Case Study
 
-In 2025, a competition was held to improve medical AI safety. The challenge: given a patient's condition, recommend an appropriate drug and dosage.
+In 2025, Google released MedGemma, a medical AI model. As part of ongoing evaluation efforts, the Terraphim team built a knowledge graph grounding pipeline and tested it against MedGemma's outputs. The results illustrate the safety case for graph-based grounding.
 
 ### The Problem: Raw LLMs Are Dangerous
 
-The raw MedGemma model (and other medical LLMs) exhibited dangerous behaviors:
+The raw MedGemma model (and other medical LLMs) exhibited dangerous behaviours in testing:
 
 - **Dosage errors**: Recommended Osimertinib **800mg** instead of 80mg — a 10x overdose that could kill
 - **Vague recommendations**: Suggested "BRAF inhibitor" instead of the specific, approved drug
@@ -32,14 +32,14 @@ Terraphim's MedGemma solution implements a six-stage pipeline that uses knowledg
 
 ### The Results: 543 Tests, 18/18 Grounded
 
-The system achieved remarkable results:
+The Terraphim grounding pipeline achieved the following results in internal testing:
 
-- **543+ tests passing** — comprehensive validation of correctness
-- **18/18 evaluation cases grounded** — every output validated against the knowledge graph
-- **800mg → 80mg correction** — the critical 10x error was caught and corrected
-- **Specific drug-dose recommendations** — not vague class-level suggestions
+- **543+ tests passing** -- comprehensive validation of correctness across the test suite
+- **18/18 evaluation cases grounded** -- every output validated against the knowledge graph
+- **800mg to 80mg correction** -- the critical 10x error was caught and corrected (the 80mg dose aligns with the FLAURA trial protocol for Osimertinib)
+- **Specific drug-dose recommendations** -- not vague class-level suggestions
 
-This is what knowledge graph grounding looks like in practice: a system that catches dangerous errors before they reach patients.
+These results are from the Terraphim team's own evaluation pipeline, not an independently judged competition. They demonstrate the pattern's potential but should be interpreted as a proof of concept rather than a peer-reviewed clinical validation.
 
 ## How KG Grounding Prevents Hallucination at Scale
 

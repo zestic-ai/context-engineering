@@ -82,10 +82,14 @@ skills:
 
 ```javascript
 async function activateSkills(query) {
-  const triggered = skills.filter(s => 
+  const triggered = skills.filter(s =>
     s.triggers.some(t => query.includes(t))
   );
-  
+
+  // Sort by tier priority (core first, then standard, then optional)
+  const tierOrder = { core: 0, standard: 1, optional: 2 };
+  triggered.sort((a, b) => (tierOrder[a.tier] ?? 2) - (tierOrder[b.tier] ?? 2));
+
   // Max 5 active
   return triggered.slice(0, 5);
 }

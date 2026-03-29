@@ -8,42 +8,41 @@ project:
 
 metadata:
   stage: draft
-  version: "0.1.0"
-  last_updated: "2026-03-28"
-  word_count_approx: 26000
-  chapters_complete: 12
+  version: "0.2.0"
+  last_updated: "2026-03-30"
+  word_count_approx: 45000
+  chapters_complete: 22
   chapters_total: 22
   appendices_planned: 7
-  review_status: "Self-reviewed, peer review pending"
+  review_status: "GLM-5 deep review complete, enrichment pass complete"
 
 # Chapter Status Tracking (Zestic quality gates)
 # Status: draft | final_draft | release
 # Review: self | peer | internal | external
 chapter_status:
   introduction: { status: final_draft, review: self, date: "2026-03-28" }
-  ch01_ai_fails: { status: final_draft, review: self, date: "2026-03-28" }
+  ch01_ai_fails: { status: final_draft, review: glm5, date: "2026-03-30" }
   ch02_context_means: { status: final_draft, review: self, date: "2026-03-28" }
-  ch03_discipline: { status: final_draft, review: self, date: "2026-03-28" }
-  ch04_architecture: { status: final_draft, review: self, date: "2026-03-28" }
-  ch05_kg_explained: { status: final_draft, review: self, date: "2026-03-28" }
-  ch06_deterministic: { status: final_draft, review: self, date: "2026-03-28" }
-  ch07_terraphim: { status: final_draft, review: self, date: "2026-03-28" }
+  ch03_discipline: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch04_architecture: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch05_kg_explained: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch06_deterministic: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch07_terraphim: { status: final_draft, review: glm5, date: "2026-03-30" }
   ch08_building_kg: { status: final_draft, review: self, date: "2026-03-28" }
-  ch09_grounding: { status: final_draft, review: self, date: "2026-03-28" }
-  ch10_token_budget: { status: final_draft, review: self, date: "2026-03-28" }
+  ch09_grounding: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch10_token_budget: { status: final_draft, review: glm5, date: "2026-03-30" }
   ch11_compression: { status: final_draft, review: self, date: "2026-03-28" }
-  ch12_skill_arch: { status: final_draft, review: self, date: "2026-03-28" }
-  ch13_claude_md: { status: final_draft, review: self, date: "2026-03-28" }
-  ch14_validation: { status: final_draft, review: self, date: "2026-03-28" }
-  ch15_multi_agent: { status: final_draft, review: self, date: "2026-03-28" }
-  ch16_hooks: { status: final_draft, review: self, date: "2026-03-28" }
-  ch17_openclaw: { status: draft, review: none, date: "" }
-  ch17_openclaw: { status: draft, review: none, date: "" }
-  ch18_governance: { status: draft, review: none, date: "" }
-  ch19_hybrid: { status: draft, review: none, date: "" }
+  ch12_skill_arch: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch13_claude_md: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch14_validation: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch15_multi_agent: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch16_hooks: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch17_openclaw: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch18_governance: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch19_hybrid: { status: final_draft, review: glm5, date: "2026-03-30" }
   ch20_practice: { status: draft, review: none, date: "" }
-  ch21_market: { status: draft, review: none, date: "" }
-  ch22_future: { status: draft, review: none, date: "" }
+  ch21_market: { status: final_draft, review: glm5, date: "2026-03-30" }
+  ch22_future: { status: final_draft, review: glm5, date: "2026-03-30" }
 
 book:
   title: "Context Engineering"
@@ -69,6 +68,16 @@ book:
     - chapters/10-token-budget-architecture.qmd
     - chapters/11-compression-strategies.qmd
     - chapters/12-skill-architecture-for-ai-agents.qmd
+    - chapters/13-claude-md-and-project-wide-rules.qmd
+    - chapters/14-validation-and-quality-gates.qmd
+    - chapters/15-multi-agent-context-management.qmd
+    - chapters/16-hooks-and-automation-for-context.qmd
+    - chapters/17-the-openclaw-context-system.qmd
+    - chapters/18-enterprise-context-governance.qmd
+    - chapters/19-hybrid-pipeline-patterns.qmd
+    - chapters/20-building-a-context-engineering-practice.qmd
+    - chapters/21-the-knowledge-graph-market-landscape.qmd
+    - chapters/22-open-problems-and-research-directions.qmd
     - appendix/appendix-a.qmd
     - appendix/appendix-b.qmd
     - appendix/appendix-c.qmd

@@ -308,6 +308,54 @@ const sharedVocabulary = {
 };
 ```
 
+## Build-Review Loops: Context-Walled Agent Coordination
+
+A particularly effective multi-agent pattern is the **build-review codon loop**, articulated by Hrishi at Anthropic (2025). The core insight: agents that evaluate their own work tend to praise it, even when the quality is poor. Separating the builder from the reviewer -- with a context wall between them -- produces dramatically better results.
+
+### The Context Wall Principle
+
+Place agents in sealed steps ("codons"), each with its own context. One agent builds, another reviews. Only the output crosses the wall:
+
+```javascript
+// Build-review codon loop
+const buildReviewLoop = {
+  iterations: 3,
+  codons: [
+    { id: "build",  model: "sonnet", contextMode: "fresh" },
+    { id: "review", model: "haiku",  contextMode: "fresh" },
+    { id: "update", model: "sonnet", contextMode: "fresh" }
+  ]
+};
+```
+
+Each codon starts with clean context, receiving only the output from the previous step. This prevents the self-praise problem: the reviewer has no memory of writing the code, so it evaluates with fresh eyes.
+
+### Model Selection Asymmetry
+
+A counterintuitive finding from Anthropic's work: **smaller models are better critics for plans, while larger models are better critics for code**.
+
+For plan review, a smaller model surfaces problems that a larger model would paper over with intelligence and intuition. The point of critique is to find problems, not compensate for them. For code review, a larger model is better because it needs to spin up from fresh context, navigate the codebase, and provide precise critiques.
+
+| Loop Type | Builder | Reviewer | Rationale |
+|-----------|---------|----------|-----------|
+| Plan-Review | Opus | Haiku | Smaller critic surfaces problems |
+| Code-Review | Sonnet | Opus | Larger critic navigates code |
+| Visual-Review | Sonnet | Opus | Larger critic catches detail |
+
+### Automated Review Surfaces
+
+The most cost-effective variant replaces agentic review with **deterministic review** for checks that do not require intelligence:
+
+- Run tests automatically between build and review codons
+- Extract diffs programmatically rather than asking an agent to find them
+- Collect metrics (coverage, linting, type checking) via scripts
+
+This pattern -- called "automated review surfaces" -- reduced costs by 10x in Anthropic's comic generation pipeline while improving output quality. The principle: "What is an agent doing that we don't need an agent for?"
+
+The combination of deterministic "rigs" (scripts between codons) and agentic review (only where judgement is needed) creates a continuous cost-to-quality curve. Each additional iteration provides diminishing but real marginal improvement, letting you trade cost for quality along a smooth gradient.
+
+This pattern validates the hybrid approach described throughout this book: deterministic methods for what can be checked deterministically, AI judgement for what requires it.
+
 ## The Meta-Cortex Concept: Agent-to-Agent Communication
 
 The **meta-cortex** is a conceptual pattern where agents share a communication layer — a way for them to coordinate without direct intervention.
@@ -412,7 +460,8 @@ Multi-agent systems require explicit context management:
 2. **Session persistence**: Working, session, long-term, shared memory
 3. **Isolation vs sharing**: Tradeoffs between focus and efficiency
 4. **Knowledge graph integration**: Shared semantic backbone
-5. **Meta-cortex**: Agent-to-agent communication layer
+5. **Build-review loops**: Context-walled codons with model selection asymmetry
+6. **Meta-cortex**: Agent-to-agent communication layer
 
 These patterns enable AI systems to scale beyond single agents while maintaining coherence.
 
@@ -420,5 +469,7 @@ These patterns enable AI systems to scale beyond single agents while maintaining
 
 - Claude Code sub-agent documentation
 - Terraphim knowledge graph implementation
+- Hrishi (Anthropic), "Agentic Programming Patterns: Build-Review Codon Loops" (2025)
+- Prithvi (Anthropic), Generator-Evaluator pattern and automated review surfaces
 - Multi-agent orchestration patterns
 - Meta-cortex conceptual model from context engineering research

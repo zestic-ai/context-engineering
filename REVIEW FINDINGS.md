@@ -121,27 +121,34 @@ All 22 chapters scanned. All have Key Sources sections.
 
 ## High Priority Fixes
 
-| # | Chapter | Issue |
-|---|---------|-------|
-| 1 | Ch5 | Verify/remove 40% Google KG claim |
-| 2 | Ch14 | Clarify KLS is custom framework |
-| 3 | Ch9 | Verify MedGemma competition + 800mg claim |
-| 4 | Ch7 | Clarify "100% accuracy" claim scope |
-| 5 | Ch12 | Recalculate token estimates |
-| 6 | Ch4 | Fix YAML example / improve analogy |
+| # | Chapter | Issue | Status |
+|---|---------|-------|--------|
+| 1 | Ch5 | Verify/remove 40% Google KG claim | RESOLVED: Softened to attributed claim |
+| 2 | Ch14 | Clarify KLS is custom framework | RESOLVED: Reframed as custom protocol |
+| 3 | Ch9 | Verify MedGemma competition + 800mg claim | RESOLVED: Qualified as internal testing, added FLAURA reference |
+| 4 | Ch7 | Clarify "100% accuracy" claim scope | RESOLVED: Reframed as "deterministic precision for vocabulary-matched terms" |
+| 5 | Ch12 | Recalculate token estimates | RESOLVED: 50 -> 200-300 with YAML overhead explanation |
+| 6 | Ch4 | Fix YAML example / improve analogy | RESOLVED: Added type/status/author fields; strengthened analogy |
 
 ## Medium Priority
 
-- Ch1: Clarify context definition
-- Ch2: Note Zestic AI framework attribution
-- Ch3: Note "vibe coding" terminology
-- Ch6: Fix embedding dimension claims
-- Ch10: Add token rule justification
-- Ch16, 13, 21, 22: Complete truncated content
+| Issue | Status |
+|-------|--------|
+| Ch1: Clarify context definition | RESOLVED: Runtime vs training context distinction |
+| Ch2: Note Zestic AI framework attribution | NOT ADDRESSED (low risk) |
+| Ch3: Note "vibe coding" terminology | RESOLVED: Attributed to Karpathy Feb 2025 |
+| Ch6: Fix embedding dimension claims | RESOLVED: 384 -> 768, added BERT/OpenAI specifics |
+| Ch10: Add token rule justification | RESOLVED: Added "Why 12,000?" explanation |
+| Ch16: Complete truncated content | RESOLVED: Added mutation warning + digest sections |
+| Ch13: Complete truncated content | VERIFIED: Chapter was not actually truncated |
+| Ch21: Complete truncated content | RESOLVED: Rewritten from 71 to 157 lines |
+| Ch22: Complete truncated content | RESOLVED: Expanded with verification bottleneck + research frontiers |
 
 ## Low Priority
 
-- Ch17: Fix tier sorting bug
-- Ch18: Fix unused function call
-- Ch19: Add fallback case
-- Ch8: Add SKOS reference
+| Issue | Status |
+|-------|--------|
+| Ch17: Fix tier sorting bug | RESOLVED: Added tierOrder sort before slice |
+| Ch18: Fix unused function call | RESOLVED: Implemented getGateRequirements with config |
+| Ch19: Add fallback case | NOT ADDRESSED (would change pipeline logic) |
+| Ch8: Add SKOS reference | NOT ADDRESSED (low priority) |

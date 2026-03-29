@@ -10,7 +10,7 @@ Vector embeddings represent text as **vectors** (arrays of numbers) in a high-di
 
 ### The Process
 
-1. **Encoding**: A model (BERT, OpenAI's text-embedding-3, etc.) converts text into a vector, typically 384 to 1536 dimensions
+1. **Encoding**: A model (BERT, OpenAI's text-embedding-3, etc.) converts text into a vector, typically 768 to 3072 dimensions (BERT base produces 768 dimensions; OpenAI's text-embedding-3-large produces up to 3072)
 2. **Indexing**: The vectors are stored in a vector database (Pinecone, Weaviate, Chroma, Milvus)
 3. **Querying**: When you ask a question, your query is also encoded into a vector
 4. **Similarity Search**: The database finds the stored vectors that are most similar to your query vector
@@ -29,7 +29,7 @@ The critical insight is that **embeddings are probabilistic approximations, not 
 
 This creates several problems:
 
-**Information loss in compression**: A knowledge graph with 1,000 nodes and complex relationships is compressed into a 128-dimensional or 256-dimensional vector. The relationship structure is lost. Only statistical co-occurrence patterns remain.
+**Information loss in compression**: A knowledge graph with 1,000 nodes and complex relationships cannot be fully represented even in a 768-dimensional or 1536-dimensional vector. The relationship structure is lost. Only statistical co-occurrence patterns remain.
 
 **No explainability**: When a vector search returns results, you get a similarity score. But you cannot explain *why* a document matched. "The cosine similarity was 0.87" is not a satisfying answer when someone asks "why did you recommend this?"
 

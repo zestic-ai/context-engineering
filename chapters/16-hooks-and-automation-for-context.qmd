@@ -259,6 +259,39 @@ hooks:
       action: log
 ```
 
+## Context Mutation Warning: When Hooks Change What the LLM Sees
+
+A critical design consideration: hooks that modify context before the LLM sees it are **context mutations**. They change what the model reasons about without the model knowing it was changed.
+
+This is powerful but dangerous:
+
+- **Pre-tool-use hooks** that rewrite file paths can cause the LLM to reference files it never actually read
+- **Augmentation hooks** that inject retrieved context can overflow the token budget silently
+- **Correction hooks** that modify outputs before returning them can mask systematic problems
+
+The safest pattern is to make mutations **visible and auditable**:
+
+```javascript
+// Anti-pattern: silent mutation
+function preHook(context) {
+  context.prompt = context.prompt.replace("npm", "bun");  // Silent change
+  return context;
+}
+
+// Better: auditable mutation
+function preHook(context) {
+  const mutations = [];
+  if (context.prompt.includes("npm")) {
+    context.prompt = context.prompt.replace("npm", "bun");
+    mutations.push({ type: "text_replace", from: "npm", to: "bun" });
+  }
+  context.metadata.mutations = mutations;  // Audit trail
+  return context;
+}
+```
+
+Treat hooks as you would database triggers: essential for automation, but a source of subtle bugs when they mutate state invisibly.
+
 ## Continuous Learning from Agent Interactions
 
 Hooks can enable **continuous learning** — improving the AI system based on interactions.
@@ -386,6 +419,30 @@ async function testHook(hook, input) {
 }
 ```
 
+## Case Study: Cron-Driven Self-Improvement Digest
+
+A concrete implementation of hook-driven continuous learning is the **AI Self-Improvement Digest** pattern, developed within the Terraphim ecosystem. Rather than relying on real-time learning hooks (which add latency to every interaction), this pattern uses scheduled automation to maintain context quality.
+
+### The Daily Digest Workflow
+
+1. **Deduplication**: Read a posted-items log, skip already-processed content
+2. **Scan sources**: Check tiered sources (daily, twice-weekly, weekly) for new content relevant to AI self-improvement
+3. **Filter**: Include only items directly relevant to the agent's capabilities
+4. **Format**: Produce 3-5 items with summary, relevance to current setup, and actionable takeaway
+5. **Experiment**: Suggest one small experiment the agent can try
+6. **Setup review**: Compare findings against the agent's existing configuration and suggest concrete updates
+7. **Track**: Append to the posted-items log for deduplication
+
+### Why Scheduled Beats Real-Time
+
+Real-time learning hooks (the pattern described in the previous section) are appropriate for capturing failures and corrections. But for broader self-improvement -- discovering better patterns, new tools, updated practices -- scheduled digests are more practical:
+
+- **No latency impact**: The digest runs outside of interactive sessions
+- **Curated quality**: A dedicated scan-filter-format pipeline produces higher quality learnings than extracting patterns from noisy interaction logs
+- **Auditable**: Each digest is a dated artefact that can be reviewed
+
+This pattern connects hooks (capturing what happened) with scheduled automation (reflecting on what to improve). The hooks record; the digest analyses. Together they form a feedback loop that maintains context freshness without adding overhead to interactive work.
+
 ## Summary: Automation Layer
 
 Hooks provide the automation layer for context management:
@@ -393,8 +450,10 @@ Hooks provide the automation layer for context management:
 1. **Session hooks**: Before/after LLM calls for preprocessing and postprocessing
 2. **Tool use hooks**: Validate, log, and correct tool interactions
 3. **Claude Code hooks**: Built-in hook points (mcp-hook, pre/post-tool-use)
-4. **Continuous learning**: Extract and store learnings from interactions
-5. **Hook taxonomy**: Organize hooks by category with metadata
+4. **Context mutation discipline**: Make all hook-driven context changes visible and auditable
+5. **Continuous learning**: Extract and store learnings from interactions
+6. **Scheduled digests**: Cron-driven self-improvement complements real-time learning hooks
+7. **Hook taxonomy**: Organize hooks by category with metadata
 
 Hooks transform AI systems from passive responders to active, self-improving systems.
 
@@ -403,4 +462,5 @@ Hooks transform AI systems from passive responders to active, self-improving sys
 - Claude Code hooks documentation
 - MCP (Model Context Protocol) specification
 - Tool use validation patterns
+- Terraphim AI Self-Improvement Digest skill pattern
 - Continuous learning in AI systems

@@ -35,17 +35,38 @@ lifecycle:
 ```javascript
 async function validateGate(stage, gate) {
   const requirements = getGateRequirements(stage, gate);
-  
-  const results = {
-    domainModel: validateDomainModel(),
-    vocabulary: validateVocabulary(),
-    artifacts: validateArtifacts(),
-    tests: validateTests()
-  };
-  
+
+  const results = {};
+  for (const req of requirements) {
+    results[req.name] = await req.validate();
+  }
+
   const passed = Object.values(results).every(r => r.passed);
-  
+
   return { passed, results, recommendation: passed ? "APPROVED" : "NEEDS_WORK" };
+}
+
+// Gate requirements define what must be validated at each stage
+function getGateRequirements(stage, gate) {
+  const gateConfig = {
+    discovery: {
+      domain_model_baseline: [
+        { name: "domainModel", validate: validateDomainModel },
+        { name: "vocabulary", validate: validateVocabulary }
+      ],
+      vocabulary_approved: [
+        { name: "vocabulary", validate: validateVocabulary }
+      ]
+    },
+    development: {
+      code_quality_passed: [
+        { name: "tests", validate: validateTests },
+        { name: "artifacts", validate: validateArtifacts }
+      ]
+    }
+  };
+
+  return gateConfig[stage]?.[gate] ?? [];
 }
 ```
 
