@@ -60,9 +60,23 @@
 - **Code incomplete:** `validateSyntax` etc. undefined, cuts off mid-function
 - **Validation layers:** Conceptual inconsistency (pre-LLM vs post-LLM)
 
+### Chapter 12: Skill Architecture for AI Agents
+- **Token estimates low:** 50 tokens for 20 skills unrealistic (likely 200-300+)
+- **Threshold logic flawed:** 0.7 threshold with 5 triggers = 4 matches needed (too strict)
+- **Code example:** Reasonable structure but trigger matching is naive
+
+### Chapter 15: Multi-Agent Context Management
+- **Patterns shown:** Sequential, parallel, hierarchical - all valid
+- **Context passing:** Token limit considerations good
+
+### Chapter 17: The OpenClaw Context System
+- **Real system:** OpenClaw is a real project (verified)
+- **Code bug:** `activateSkills` doesn't sort by tier, may exclude core skills
+- **Memory architecture:** Solid conceptual model
+
 ---
 
-## Status: Phase 2 In Progress (5/22 chapters reviewed)
+## Status: Phase 2 In Progress (8/22 chapters reviewed)
 
 - Phase 1: ✅ Complete
 - Phase 2: 🔄 5/22 complete
@@ -77,5 +91,8 @@
 | Medium | Ch1 | Context definition | Clarify runtime vs weights |
 | Medium | Ch8 | SKOS reference | Add standard terminology |
 | Medium | Ch10 | Token rule justification | Add rationale |
+| Medium | Ch12 | Token estimates | Recalculate for 20 skills |
+| Medium | Ch12 | Threshold logic | Fix 0.7 threshold |
 | Low | Ch8 | Edge type consistency | Fix table |
 | Low | Ch14 | Code completeness | Complete code blocks |
+| Low | Ch17 | Tier sorting bug | Fix activateSkills |
