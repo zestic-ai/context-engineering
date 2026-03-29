@@ -1,14 +1,5 @@
 # Book Review: Context Engineering
 
-## Phase 1: Structural Scan (Cerebras Llama 3.1 - Fast)
-
-### Chapter 1: Why AI Software Projects Fail Differently
-- **Structure:** ✅ Strong hook, clear sections, logical flow
-- **Issues noted:** Some technical jargon may need explanation for non-technical readers
-- **Cross-references:** Clear preview of next chapter
-
----
-
 ## Phase 1 Complete: Structural Scan (All 22 Chapters)
 
 | Ch | Summary | Issue |
@@ -42,31 +33,49 @@
 
 ## Phase 2: Deep Technical Review (GLM-5)
 
-### Chapter 1 Review Findings
-- **Context definition blurs technical lines:** Conflates runtime context vs. model weights
+### Chapter 1: Why AI Software Projects Fail Differently
+- **Context definition blurs:** Runtime context vs. model weights conflated
 - **"Context Drift" vs "Training Data Error":** Static typo ≠ temporal drift
 - **Turkhanov citation:** Not widely verifiable (proprietary)
 
-### Chapter 5 Review: Knowledge Graphs Explained
+### Chapter 5: Knowledge Graphs Explained
 - **Google KG 40% claim:** May conflate with zero-click search stats
 - **Database comparison:** Oversimplification (graph databases ARE databases)
-- **SNOMED CT:** Numbers correct, traversal examples simplified
 - **Missing:** KG inference capabilities not mentioned
 
-**Strengths:** Clear foundational concepts, triples/nodes/edges correct ✅
+### Chapter 8: Building a Knowledge Graph for Context
+- **Node/Edge types:** Mix of modeling paradigms (SKOS vs custom)
+- **Example data:** Limited sample, internal IDs unclear
+- **Missing:** SKOS standard reference, graph storage mechanisms
+- **Edge types table:** Missing "related", "broader", "narrower" entries shown in examples
+
+### Chapter 10: Token Budget Architecture
+- **12,000 token rule:** Practical but arbitrary without justification
+- **Code incomplete:** `compressContext` function truncated
+- **Token estimation:** No explanation of calculation method
+
+### Chapter 14: Validation and Quality Gates
+- **KLS invented:** Not a recognized standard (presented as if established)
+- **YAML schema issues:** Mixes manuscript review format with validation schema
+- **Code incomplete:** `validateSyntax` etc. undefined, cuts off mid-function
+- **Validation layers:** Conceptual inconsistency (pre-LLM vs post-LLM)
 
 ---
 
-## Status: Phase 1 Complete, Phase 2 In Progress
+## Status: Phase 2 In Progress (5/22 chapters reviewed)
 
-- Phase 1: ✅ Complete (all 22 chapters)
-- Phase 2: 🔄 In Progress (Ch 1, 5 reviewed)
+- Phase 1: ✅ Complete
+- Phase 2: 🔄 5/22 complete
 - Phase 3: Pending
 
 ## Recommendations Summary
 
-1. **Ch1:** Clarify runtime context vs. training weights
-2. **Ch1:** Distinguish context drift from data errors
-3. **Ch5:** Verify/remove 40% Google KG claim
-4. **Ch5:** Add KG inference mention
-5. **All:** Add citations for Turkhanov framework
+| Priority | Chapter | Issue | Fix |
+|----------|---------|-------|-----|
+| High | Ch5 | 40% Google KG claim | Verify or remove |
+| High | Ch14 | KLS presentation | Clarify it's custom framework |
+| Medium | Ch1 | Context definition | Clarify runtime vs weights |
+| Medium | Ch8 | SKOS reference | Add standard terminology |
+| Medium | Ch10 | Token rule justification | Add rationale |
+| Low | Ch8 | Edge type consistency | Fix table |
+| Low | Ch14 | Code completeness | Complete code blocks |
