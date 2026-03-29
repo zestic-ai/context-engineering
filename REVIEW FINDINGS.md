@@ -1,98 +1,147 @@
 # Book Review: Context Engineering
 
-## Phase 1 Complete: Structural Scan (All 22 Chapters)
+## Phase 1: Structural Scan (Cerebras Llama 3.1) ✅ Complete
 
-| Ch | Summary | Issue |
-|----|---------|-------|
-| 1 | AI fails differently - context drift | Needs more data/examples |
-| 2 | Context defined (4 dimensions) | Assumes ML background |
-| 3 | Context Engineering as discipline | Heavy on "not" vs "is" |
-| 4 | Architecture of meaning | Too abstract |
-| 5 | KG explained | Good structure |
-| 6 | Deterministic vs embeddings | Good comparison |
-| 7 | Terraphim graph embeddings | Technical depth ✅ |
-| 8 | Building KG for context | Practical guide ✅ |
-| 9 | KG grounding as safety gate | Key concept ✅ |
-| 10 | Token budget | Architecture focus |
-| 11 | Compression strategies | Practical techniques |
-| 12 | Skill architecture | Agent focus |
-| 13 | CLAUDE.md | Project rules |
-| 14 | Validation + quality gates | Critical chapter |
-| 15 | Multi-agent context | Complex but important |
-| 16 | Hooks + automation | Implementation |
-| 17 | OpenClaw system | Real-world case |
-| 18 | Enterprise governance | Business context |
-| 19 | Hybrid pipelines | Architecture |
-| 20 | Building practice | Organizational |
-| 21 | KG market landscape | Analysis |
-| 22 | Open problems | Future directions |
-
-**Key Sources:** ✅ All 22 chapters have Key Sources section (verified)
+All 22 chapters scanned. All have Key Sources sections.
 
 ---
 
-## Phase 2: Deep Technical Review (GLM-5)
+## Phase 2: Deep Technical Review (GLM-5) - Complete ✅
 
 ### Chapter 1: Why AI Software Projects Fail Differently
-- **Context definition blurs:** Runtime context vs. model weights conflated
-- **"Context Drift" vs "Training Data Error":** Static typo ≠ temporal drift
-- **Turkhanov citation:** Not widely verifiable (proprietary)
+- Context definition blurs runtime vs. model weights
+- "Context drift" vs static data error
+- Turkhanov citation unverifiable
+
+### Chapter 2: What "Context" Actually Means
+- 4 dimensions valid (Domain, Technical, Operational, Commercial)
+- "Zestic AI framework" needs verification
+
+### Chapter 3: Context Engineering as a Discipline
+- Distinctions clear (prompt vs. vibe vs. docs)
+- "Vibe coding" term - niche/possibly invented
+- Historical roots oversimplified
+
+### Chapter 4: The Architecture of Meaning
+- Decision container concept: interesting but YAML example has issues
+- Shipping container analogy weakens argument (passive, not enforcing)
+- Missing decision type/status fields
 
 ### Chapter 5: Knowledge Graphs Explained
-- **Google KG 40% claim:** May conflate with zero-click search stats
-- **Database comparison:** Oversimplification (graph databases ARE databases)
-- **Missing:** KG inference capabilities not mentioned
+- 40% Google KG claim unverified
+- "Unlike databases" oversimplification
+- Missing: KG inference capabilities
+
+### Chapter 6: Deterministic Search vs Vector Embeddings
+- "Probabilistic approximations" terminology imprecise
+- 1,000 nodes → vector compression: category error
+- BERT 768d (not 384), good for embedding sizes
+
+### Chapter 7: Terraphim Graph Embeddings
+- "100% accuracy for known terms" = tautology (lookup table also 100%)
+- Challenge is unknown/fuzzy inputs (recall), not exact matches
 
 ### Chapter 8: Building a Knowledge Graph for Context
-- **Node/Edge types:** Mix of modeling paradigms (SKOS vs custom)
-- **Example data:** Limited sample, internal IDs unclear
-- **Missing:** SKOS standard reference, graph storage mechanisms
-- **Edge types table:** Missing "related", "broader", "narrower" entries shown in examples
+- Node/edge types mix modeling paradigms
+- Missing SKOS reference
+- Edge types table inconsistent with examples
+
+### Chapter 9: Knowledge Graph Grounding as Safety Gate
+- MedGemma competition: need verification
+- Six-stage pipeline: reasonable
+- "800mg → 80mg" correction: specific claim needing source
 
 ### Chapter 10: Token Budget Architecture
-- **12,000 token rule:** Practical but arbitrary without justification
-- **Code incomplete:** `compressContext` function truncated
-- **Token estimation:** No explanation of calculation method
+- 12,000 token rule: practical but arbitrary
+- Code truncated (`compressContext` incomplete)
+- Token estimation method unexplained
 
-### Chapter 14: Validation and Quality Gates
-- **KLS invented:** Not a recognized standard (presented as if established)
-- **YAML schema issues:** Mixes manuscript review format with validation schema
-- **Code incomplete:** `validateSyntax` etc. undefined, cuts off mid-function
-- **Validation layers:** Conceptual inconsistency (pre-LLM vs post-LLM)
+### Chapter 11: Compression Strategies
+- Priority order valid (dedupe → summarize → truncate → drop)
+- Code example functional
 
 ### Chapter 12: Skill Architecture for AI Agents
-- **Token estimates low:** 50 tokens for 20 skills unrealistic (likely 200-300+)
-- **Threshold logic flawed:** 0.7 threshold with 5 triggers = 4 matches needed (too strict)
-- **Code example:** Reasonable structure but trigger matching is naive
+- 50 tokens for 20 skills unrealistic (likely 200-300+)
+- 0.7 threshold with 5 triggers = 4 matches needed (too strict)
+- Trigger matching naive (substring)
+
+### Chapter 13: CLAUDE.md and Project-Wide Rules
+- Pattern valid (real CLAUDE.md exists)
+- Practical accuracy ✅
+- Chapter appears truncated
+
+### Chapter 14: Validation and Quality Gates
+- KLS: Not a recognized standard (presented as if established)
+- YAML schema issues
+- Code incomplete
 
 ### Chapter 15: Multi-Agent Context Management
-- **Patterns shown:** Sequential, parallel, hierarchical - all valid
-- **Context passing:** Token limit considerations good
+- Patterns valid (sequential, parallel, hierarchical)
+- Context passing considerations good
+
+### Chapter 16: Hooks and Automation
+- Code incomplete (cut off mid-function)
+- Context mutation pattern: no warning
 
 ### Chapter 17: The OpenClaw Context System
-- **Real system:** OpenClaw is a real project (verified)
-- **Code bug:** `activateSkills` doesn't sort by tier, may exclude core skills
-- **Memory architecture:** Solid conceptual model
+- OpenClaw is a real project ✅
+- Code bug: activateSkills doesn't sort by tier
+
+### Chapter 18: Enterprise Context Governance
+- Gated lifecycle reasonable
+- Gate validation code: `getGateRequirements()` called but unused
+- No error handling
+
+### Chapter 19: Hybrid Pipeline Patterns
+- Classification missing fallback case
+- `kgGround` wraps `semanticSearch`: always right?
+
+### Chapter 20: Building a Context Engineering Practice
+- Roles definition clear
+- Structure sensible ✅
+
+### Chapter 21: The Knowledge Graph Market Landscape
+- Claims need verification (Microsoft GraphRAG, Neo4j, etc.)
+- Chapter appears truncated
+
+### Chapter 22: Open Problems and Research Directions
+- Research directions valid (Cross-Context Coherence, Real-Time Updates, Privacy)
+- Chapter truncated
 
 ---
 
-## Status: Phase 2 In Progress (8/22 chapters reviewed)
+## Summary: All 22 Chapters Reviewed
 
-- Phase 1: ✅ Complete
-- Phase 2: 🔄 5/22 complete
-- Phase 3: Pending
+| Status | Count |
+|--------|-------|
+| Phase 1 (Structural) | ✅ 22/22 |
+| Phase 2 (Deep GLM-5) | ✅ 22/22 |
 
-## Recommendations Summary
+---
 
-| Priority | Chapter | Issue | Fix |
-|----------|---------|-------|-----|
-| High | Ch5 | 40% Google KG claim | Verify or remove |
-| High | Ch14 | KLS presentation | Clarify it's custom framework |
-| Medium | Ch1 | Context definition | Clarify runtime vs weights |
-| Medium | Ch8 | SKOS reference | Add standard terminology |
-| Medium | Ch10 | Token rule justification | Add rationale |
-| Medium | Ch12 | Token estimates | Recalculate for 20 skills |
-| Medium | Ch12 | Threshold logic | Fix 0.7 threshold |
-| Low | Ch8 | Edge type consistency | Fix table |
-| Low | Ch14 | Code completeness | Complete code blocks |
-| Low | Ch17 | Tier sorting bug | Fix activateSkills |
+## High Priority Fixes
+
+| # | Chapter | Issue |
+|---|---------|-------|
+| 1 | Ch5 | Verify/remove 40% Google KG claim |
+| 2 | Ch14 | Clarify KLS is custom framework |
+| 3 | Ch9 | Verify MedGemma competition + 800mg claim |
+| 4 | Ch7 | Clarify "100% accuracy" claim scope |
+| 5 | Ch12 | Recalculate token estimates |
+| 6 | Ch4 | Fix YAML example / improve analogy |
+
+## Medium Priority
+
+- Ch1: Clarify context definition
+- Ch2: Note Zestic AI framework attribution
+- Ch3: Note "vibe coding" terminology
+- Ch6: Fix embedding dimension claims
+- Ch10: Add token rule justification
+- Ch16, 13, 21, 22: Complete truncated content
+
+## Low Priority
+
+- Ch17: Fix tier sorting bug
+- Ch18: Fix unused function call
+- Ch19: Add fallback case
+- Ch8: Add SKOS reference
