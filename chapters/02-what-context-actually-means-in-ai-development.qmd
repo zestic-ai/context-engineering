@@ -58,6 +58,10 @@ When these assumptions are aligned — when the AI's understanding matches the o
 
 The challenge is that assumptions are invisible. They are not stated in the prompt. They are not retrieved from the knowledge base. They are embedded in the model's weights, absorbed during training, and reinforced through interaction. You cannot see them directly. You can only observe their effects.
 
+The Russian systems engineering tradition formalises this through the concept of **epistemic status** (Medvedeva, School of Systems Management, 2021) -- the enumeration of what each agent believes to be true about the world. Not all agents describe the world with the same set of statements. One stakeholder might believe statements A, B, and C are true, while another believes A, C, and D are true -- and considers B to be formulated in a meaningless way. Critically, each agent also holds beliefs about *other agents' epistemic statuses*: what they think others believe.
+
+When an AI system operates on context assembled from multiple stakeholders, it inherits conflicting epistemic statuses without any mechanism to detect the conflict. The model cannot distinguish between a statement that all parties agree on and one where half the stakeholders would reject the premise. Context engineering addresses this by making epistemic status *explicit*: the reconciled domain model (Chapter 4) forces alignment, and validation gates (Chapter 14) catch contradictions before they propagate.
+
 ## Why Context Expands Faster Than It Can Be Structured
 
 Turkhanov describes this as the **entropy problem**: in enterprise AI programs, context expands faster than it can be structured. Every stakeholder interaction adds new interpretations. Every product change adds new domain knowledge. Every integration adds new technical constraints.
@@ -75,6 +79,10 @@ A critical factor in context expansion is **stakeholder reinterpretation**. Each
 When these stakeholders interact with the AI system, they inadvertently introduce their reinterpretations into the context. The model doesn't know that "the feature" means different things to different people. It treats all inputs as equally authoritative.
 
 Over time, the context becomes a palimpsest — layers of reinterpretation written over each other, none fully erased. The original intent is lost. The model operates on an average of all the interpretations, which may correspond to no one's actual intent.
+
+This is not merely an observation -- it is a well-understood structural phenomenon. ISO 42010, the international standard for architecture description, formalises this through the concept of **viewpoints**: "descriptions are composed from a role position and role objects of interest are highlighted within them" (Medvedeva, School of Systems Management, 2021). Each stakeholder occupies a different role, and each role highlights different objects of interest. The product manager sees the system through a market-fit viewpoint. The engineer sees it through an implementation viewpoint. The regulator sees it through a compliance viewpoint. Each viewpoint is legitimate -- but each produces a different description of the same system.
+
+When an AI system ingests context from multiple viewpoints without labelling which viewpoint each piece belongs to, it cannot distinguish between complementary perspectives and contradictory ones. Context engineering addresses this by making viewpoints explicit: the role-based graphs in Chapter 7 provide different synonym edges and relationships per viewpoint, and the reconciled domain model in Chapter 4 forces alignment at the points where viewpoints must agree.
 
 ## AI-Specific Context Variables
 
@@ -111,3 +119,5 @@ These dimensions interact and conflict. Managing them requires explicit structur
 
 - Turkhanov, "Context Engineering: The Missing Discipline" (Zestic AI, 2025)
 - Zestic AI framework on context dimensions
+- Medvedeva, "Creating Explanations" (Ontologics and Communication, School of Systems Management, 2021) -- epistemic status of agents
+- Medvedeva, "Complex Descriptions and Meta-Languages" (Ontologics and Communication, School of Systems Management, 2021) -- viewpoints, ISO 42010

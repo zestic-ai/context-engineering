@@ -135,6 +135,14 @@ When you query the knowledge graph, you specify the role. The system uses only t
 
 This is crucial for enterprise AI: the same term means different things in different contexts, and the AI system must reflect that.
 
+### The Formal Role Model
+
+The role-based graph concept has a formal foundation in the Russian systems engineering tradition (Medvedeva, School of Systems Management, 2021; drawing on ISO 42010). Each role is defined by three components: **concern** (what objects attract the role's attention), **preference** (what the role wants to happen), and **intention** (strategies the role plans to use).
+
+In the sales context, the concern is revenue opportunity, the preference is deal closure, and the intention is pipeline progression. In the support context, the concern is customer satisfaction, the preference is issue resolution, and the intention is SLA compliance. These structural differences explain *why* the same entity ("client") needs different synonym edges per role -- because the role's concern determines which related concepts are relevant.
+
+This is not ad hoc: ISO 42010 formalises it as the *viewpoint* concept -- "descriptions are composed from a role position and role objects of interest are highlighted within them." When Terraphim rebuilds the Aho-Corasick automaton for a new role (in ~20ms), it is implementing a viewpoint switch -- changing which descriptions are active, which concerns are foregrounded, and which synonym edges are in play.
+
 ## The Aho-Corasick Automata Approach
 
 At the heart of Terraphim's performance is the **Aho-Corasick algorithm** — a fast pattern-matching algorithm that finds all matches in a single scan through the text.
@@ -340,3 +348,4 @@ This is not a replacement for all AI approaches. But for the 80% of queries wher
 - MedGemma competition results (demonstrating deterministic grounding)
 - Terraphim role-based graph configuration patterns (kimiko-terraphim-kg-config)
 - ProCoder AI Pack documentation and integration patterns
+- Medvedeva, "Complex Descriptions and Meta-Languages" (Ontologics and Communication, School of Systems Management, 2021) -- formal role model (concern/preference/intention), ISO 42010 viewpoints

@@ -209,6 +209,19 @@ Extend the base for specific contexts:
 
 This approach gives you the best of both worlds: consistent structure across projects with specialized vocabulary for each domain.
 
+### Why Schemas of Schemas: The Meta-Language Principle
+
+The layered schema approach has a formal justification from the Russian systems engineering tradition. Medvedeva (School of Systems Management, 2021) introduces the concept of **meta-languages**: a meta-language is a language introduced to describe another language. The chain is:
+
+1. **Object**: the real-world entity (a drug, a patient, an order)
+2. **Description**: the knowledge graph node that represents it (in the graph's data language)
+3. **Schema**: the definition of valid graph structures (in JSON Schema -- a meta-language)
+4. **Meta-schema**: the specification of valid schemas (JSON Schema specification itself -- a meta-meta-language)
+
+Each level describes the level below. If you try to describe a language using itself, you encounter paradoxes -- which is why base schemas and extensions must be separate. The base schema is a meta-language for project data; the extension mechanism is a meta-language for the base schema itself.
+
+In practice, this means: do not mix your data with your schema. Do not embed validation rules inside the knowledge graph itself. Keep the levels separate, and you gain the ability to validate, compose, and extend at each level independently. This is the structural foundation for the validation pipeline in Chapter 14.
+
 ## Validation: JSON Schema with Local $ref Resolution
 
 Validation is critical. A knowledge graph with invalid structure is worse than no graph — it gives false confidence.
@@ -425,3 +438,4 @@ The result is a knowledge graph that provides precise, explainable, auditable co
 - Terraphim AI schema design patterns
 - Zestic AI framework on vocabulary-first approaches
 - SNOMED CT schema design for healthcare
+- Medvedeva, "Complex Descriptions and Meta-Languages" (Ontologics and Communication, School of Systems Management, 2021) -- meta-language principle for schema layering

@@ -12,6 +12,8 @@ In traditional software projects, we produce documentation: requirements documen
 
 In Context Engineering, artefacts are different. An **artefact is a container for a decision** — what was decided, why, what alternatives were considered, and what the implications are. This shifts the purpose from recording to **enforcing**.
 
+The Russian systems engineering tradition (Medvedeva, School of Systems Management, 2021) sharpens this distinction. A *description* is a carrier of information -- but the information is useless without an *interpretation instruction*. A description *with* an explicit instruction is mechanical: if you understand the instruction, the rest follows deterministically. A description *without* an instruction relies on the reader's prior experience and "narrowing of the interpretation field" -- a process that is "usually simply not reflected upon." Most project documentation is descriptions without interpretation instructions. Schemas, type definitions, and metadata *are* interpretation instructions. An artefact with explicit metadata and schema is deterministically interpretable; one without is ambiguous.
+
 The analogy is logistics: a shipping container moves through workflows, is tracked at every port, and is processed by systems that read its manifest and enforce routing rules. The container is not passive storage -- it is a unit of work that the logistics system acts on. Similarly, an artefact moves through the project lifecycle, gets processed by AI systems, and enforces constraints. The manifest is the metadata; the ports are the stage gates; the routing rules are the validation checks.
 
 Consider an API specification. As a traditional document, it says "the API accepts these parameters." As a decision container, it says:
@@ -21,6 +23,19 @@ Consider an API specification. As a traditional document, it says "the API accep
 - "Any change to this specification requires impact analysis"
 
 This enables **impact analysis**: when something changes, you can trace which decisions are affected. It enables **rollback**: when a decision proves wrong, you can revert to the previous decision. It enables **audit**: regulators or reviewers can see the reasoning behind any choice.
+
+### The Argumentation Structure of Decision Containers
+
+The Toulmin model of argumentation (as taught in the School of Systems Management, Medvedeva 2021) provides a formal structure for how these decisions should be recorded. The model identifies six components:
+
+- **Claim**: The decision itself -- "we chose composite IDs for the Order API"
+- **Data/Evidence**: What supports it -- "legacy systems require ID parsing"
+- **Warrant**: The connection between evidence and claim -- "composite IDs enable backwards compatibility"
+- **Backing**: Additional support if the warrant is contested -- "integration tests confirm compatibility"
+- **Rebuttals**: Limitations on the claim -- "this adds parsing overhead for new clients"
+- **Qualifier**: The epistemic status -- "this is the best option given current constraints" (not "this is the only possible approach")
+
+Most artefacts in traditional projects contain only the Claim. The richest decision containers include all six components, enabling AI systems to reason about the *strength* of a decision, not just its existence.
 
 ### Implementing Decision Containers
 
@@ -75,6 +90,8 @@ The domain model must be **reconciled** — meaning it is explicitly validated f
 4. **Baseline locking**: At each stage gate, the model is frozen and versioned
 
 Without reconciliation, different parts of the organization develop different understandings. One team uses "product" to mean the item purchased; another uses it to mean the service subscription. These seemingly small misalignments compound into system-level failures.
+
+A foundational principle from the Russian systems engineering tradition captures why: "Synchronisation of the consequence in actions without synchronisation of the explanation is often a mistake that yields a short-term result but leads to significant losses in the long term" (Medvedeva, School of Systems Management, 2021). In context engineering terms: if two teams agree on *what to build* without agreeing on *why* -- without synchronising their explanations of the problem -- they will diverge as soon as they encounter an undocumented edge case. Reconciliation is the process of synchronising explanations, not just actions.
 
 ## Baselining and Version Control for Semantic Alignment
 
@@ -172,6 +189,18 @@ By bounding context to the decision space:
 
 This is why the "configuration manager AI agent" concept is powerful: it manages context transitions, ensuring that context is appropriate for each stage.
 
+### Roles in Context Governance
+
+The formal model of roles from the Russian systems engineering tradition (Medvedeva, School of Systems Management, 2021; drawing on ISO 42010) provides a precise framework for context partitioning. A **role** is a functional part of the system, defined by three components:
+
+- **Concern**: the objects that attract the role's attention -- what it notices from the background
+- **Preference**: what the role wants to happen with those objects
+- **Intention**: the strategies the role plans to use
+
+An engineer's concern is system integrity; their preference is architectural coherence; their intention is to enforce constraints. An account manager's concern is client satisfaction; their preference is feature delivery; their intention is to commit to timelines. These are not wrong -- they are structurally different roles with structurally different contexts.
+
+This formal role model explains why each lifecycle stage requires different context: the *active roles change*. During discovery, the product owner's concern/preference/intention dominates. During development, the engineer's does. During deployment, the operator's does. Context engineering partitions context along role boundaries, not just temporal ones. This connects directly to the role-based graphs in Chapter 7, where the same knowledge graph provides different synonym edges and relationships depending on which role is querying it.
+
 ## Concept Modelling Fundamentals
 
 As we close this chapter, we return to the concept modelling that was introduced in Chapter 1. Now we can make it more precise. (See also Chapter 8 for the practical application.)
@@ -221,6 +250,9 @@ Without this architecture, Context Engineering is just another buzzword. With it
 ## Key Sources
 
 - Turkhanov, "Context Engineering: The Missing Discipline" (Zestic AI, 2025)
-- Eric Evans, "Domain-Driven Design" (2003) — entities, aggregates, bounded contexts
+- Eric Evans, "Domain-Driven Design" (2003) -- entities, aggregates, bounded contexts
 - Systems engineering configuration management literature
 - OpenClaw context architecture (practical implementation)
+- Medvedeva, "Creating Explanations" (Ontologics and Communication, School of Systems Management, 2021) -- Toulmin argumentation, synchronisation principle
+- Medvedeva, "Complex Descriptions and Meta-Languages" (Ontologics and Communication, School of Systems Management, 2021) -- descriptions, interpretation instructions, roles (concern/preference/intention), ISO 42010 viewpoints
+- "Ontology in Plain English" (translated from Russian, systems engineering community) -- entity type misassignment

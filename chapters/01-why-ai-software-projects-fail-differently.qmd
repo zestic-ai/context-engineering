@@ -54,6 +54,18 @@ The healthcare example from the opening illustrates this precisely. The model di
 
 This leads to the second way AI fails differently: **the system can be entirely functional and entirely wrong at the same time**.
 
+### Narratives Without Explanatory Power
+
+The Russian systems engineering tradition offers a precise vocabulary for this problem. Medvedeva (School of Systems Management, 2021) distinguishes between **explanations** and **narratives**. An explanation is grounded, detailed, and falsifiable -- it indicates the internal structure of cause-and-effect relationships and can be tested against reality. A narrative is sequential, persuasive, and easily remembered -- but it does not require grounding and is not subject to the rules of evidence.
+
+Both create a sense of understanding. Only explanations have predictive power.
+
+LLMs produce narratives, not explanations. Their outputs are sequential, plausible, and compelling. They sound like they understand cause and effect. But they cannot show you the gears turning inside the machine -- they are, in the epistemological sense, **black boxes that produce narratives**. When the System School distinguishes a "transparent box" (where you see exactly how the result is produced) from a "black box" (where you poke the system and observe the output), LLMs are firmly in the second category. The danger is that their narratives *feel* like explanations. Stakeholders mistake the narrative for understanding and act on it.
+
+This matters for context engineering because our discipline must provide what LLMs cannot: the transparent-box structure. Knowledge graphs (Part II), validation gates (Chapter 14), and deterministic search (Chapter 6) supply the explicit, traceable cause-and-effect chains that turn AI narratives into grounded explanations.
+
+The System School offers five criteria for distinguishing strong explanations from weak ones: (1) **more grounded** -- specific, with narrow claims rather than vague generalities; (2) **more detailed** -- transparent-box, showing internal mechanism; (3) **more falsifiable** -- cutting off impossible worlds, not just describing possible ones; (4) **fewer assumptions** -- not introducing new unsupported premises; (5) **solves problems of the old theory** -- offering something the previous explanation could not. These criteria apply directly to evaluating AI outputs: a response that is vague, unfalsifiable, assumes novel premises, and does not improve on prior answers is a narrative masquerading as understanding. The validation frameworks in Chapter 14 operationalise these criteria through automated checks.
+
 ## The Illusion of Simplicity
 
 Perhaps the most dangerous aspect of AI software development is the **illusion of simplicity** in LLM interfaces. An API call looks deceptively like a function call:
@@ -111,6 +123,8 @@ Before proceeding to solutions, we need a shared vocabulary. Context engineering
 An **entity** is a distinct concept that the AI system must understand. In a customer service context, entities include: customer, product, order, refund, warranty, complaint. In a medical context, entities include: patient, diagnosis, treatment, dosage, contraindication.
 
 Entities are not just words—they are semantic units with implicit meaning. The entity "dosage" carries pharmacological assumptions about safe ranges, administration routes, and patient-specific modifiers. If the AI system does not understand "dosage" as a structured entity, it cannot reason about it reliably.
+
+Critically, **assigning an entity to the wrong type** causes cascading errors. A Russian ontology primer (translated from Russian, originally from the systems engineering community) illustrates this with a deceptively simple example. Consider five stages of problem-solving: (1) identify the problem, (2) form requirements, (3) create a strategy, (4) build a plan, (5) execute. Each stage is a different entity type. Confusing them -- saying "the problem is I need to change my job" when the actual problem is "I don't enjoy my work" -- collapses the solution space before the real problem is understood. In AI systems, this type confusion is endemic: prompts conflate requirements with implementations, constraints with preferences, domain rules with engineering decisions. When the AI inherits a mistyped entity, it faithfully optimises for the wrong thing.
 
 ### Relationships
 
@@ -175,3 +189,5 @@ In the next chapter, we will define what "context" actually means in AI developm
 - Korinek and Suh, "Some Simple Economics of AGI" (verification bottleneck analysis)
 - Armin Ronacher, "Agent Design Is Still Hard"
 - MedGemma competition case study
+- Medvedeva, "Creating Explanations" (Ontologics and Communication, School of Systems Management, 2021) -- explanation vs narrative distinction, epistemic status, grounding
+- "Ontology in Plain English" (translated from Russian, systems engineering community) -- entity type misassignment

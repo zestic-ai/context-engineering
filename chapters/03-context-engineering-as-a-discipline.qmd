@@ -60,6 +60,17 @@ The oldest root is **configuration management** — the practice of controlling 
 
 In AI, configuration expands to include prompts, knowledge bases, model parameters, retrieval configurations, and validation rules. Context Engineering applies configuration management principles to this expanded scope.
 
+### The Scientific Method of Context Building
+
+A parallel tradition from the Russian systems engineering community provides a methodological insight. Medvedeva (School of Systems Management, 2021) observes that explanations are *not* created by observing the world, collecting data, generalising, and then explaining. This is the common misconception. Instead, explanations are created through:
+
+1. **Problem statement** -- identifying what is surprising, confusing, or broken
+2. **Listing hypotheses** -- both existing explanations and new conjectures
+3. **Pre-experimental argumentation** -- having at least two competing explanations *before* collecting data, so the data can distinguish between them
+4. **Listing observations** -- observing with a purpose, knowing which observations favour which hypothesis
+
+This matters for context engineering because teams routinely skip steps 2 and 3. They observe a context problem (the AI gives wrong answers), jump to a solution (add more documents to the knowledge base), and never test whether the diagnosis is correct. Context engineering applies this scientific method: define the problem explicitly, generate competing hypotheses about the cause, design validation that can distinguish between them, and only then make changes. This is the methodology behind the validation gates in Chapter 14.
+
 ## Operational Discipline: The Karpathy Guidelines
 
 While Context Engineering provides the structural framework, day-to-day execution requires operational discipline. Andrej Karpathy's LLM coding guidelines (2025) articulate four principles that translate directly to context engineering practice:
@@ -172,3 +183,4 @@ The cost of ignoring it is structural debt that compounds over time. This makes 
 - Eric Evans, "Domain-Driven Design" (2003)
 - Andrej Karpathy, "LLM Coding Guidelines" (2025) and "vibe coding" concept (February 2025)
 - Systems engineering literature on configuration management (1960s)
+- Medvedeva, "Creating Explanations" (Ontologics and Communication, School of Systems Management, 2021) -- scientific method of context building
