@@ -43,7 +43,7 @@ This book is organized into six parts, progressing from foundational understandi
 **Part II: Knowledge Graphs as Context Infrastructure** (Chapters 5-9)
 - Understanding knowledge graphs and their role in AI
 - The critical comparison: deterministic search vs vector embeddings
-- How Terraphim's graph embeddings achieve 100% accuracy
+- How Terraphim's graph embeddings achieve 100% accuracy for known vocabulary
 - Building knowledge graphs for your context
 - Using knowledge graphs as safety gates against hallucination
 

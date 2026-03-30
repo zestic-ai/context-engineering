@@ -1,7 +1,97 @@
 # Appendix F: Resources and Tools
 
-*TODO: Write content*
+This appendix compiles the tools, frameworks, standards, and references cited throughout this book.
 
-## Content
+## Knowledge Graph Tools
 
-TODO
+| Tool | Type | Description | Chapters |
+|------|------|-------------|----------|
+| **Terraphim** | Deterministic search engine | Aho-Corasick automaton-based search with role-based knowledge graphs. Sub-millisecond matching across 1.4M+ patterns. | 6, 7, 9, 19 |
+| **Neo4j** | Graph database | Property graph database with Cypher query language. Market leader for enterprise knowledge graphs. | 5, 19, 21 |
+| **Memgraph** | Graph database | In-memory property graph compatible with Cypher. Optimised for real-time queries. | 19, 21 |
+| **Apache Jena** | RDF framework | Java framework for building Semantic Web and Linked Data applications. Supports SPARQL. | 5, 19 |
+| **TrustGraph** | Graph store | Apache Cassandra-backed graph store designed for billion-node knowledge graphs with trust scoring. | 19, 21 |
+
+## Embedding and RAG Tools
+
+| Tool | Type | Description | Chapters |
+|------|------|-------------|----------|
+| **Pinecone** | Vector database | Managed vector database for similarity search. Cloud-hosted. | 6 |
+| **Weaviate** | Vector database | Open-source vector database with built-in vectorisation. | 6 |
+| **Chroma** | Vector database | Lightweight embedding database for AI applications. | 6 |
+| **LangChain** | RAG framework | Framework for building LLM applications with retrieval pipelines. | 19 |
+| **LlamaIndex** | RAG framework | Data framework for connecting LLMs to external data sources. | 19 |
+
+## AI Models and APIs
+
+| Model/Service | Provider | Relevance | Chapters |
+|---------------|----------|-----------|----------|
+| **Claude** | Anthropic | Primary LLM for context-engineered agents. 200K token context window. | 10, 13, 15 |
+| **GPT-4** | OpenAI | 128K context window. Token budget comparison baseline. | 10 |
+| **BERT** | Google | Base embedding model (768 dimensions). Reference for embedding discussion. | 6 |
+| **text-embedding-3** | OpenAI | Embedding model (up to 3072 dimensions). | 6 |
+| **MedGemma** | Google | Medical domain LLM. Used in KG grounding case study. | 9 |
+
+## Standards and Specifications
+
+| Standard | Organisation | Description | Chapters |
+|----------|-------------|-------------|----------|
+| **RDF 1.1** | W3C | Resource Description Framework for expressing data as triples. | 5, 19, App D |
+| **OWL** | W3C | Web Ontology Language for formal ontology definitions. | 5, 19 |
+| **SKOS** | W3C | Simple Knowledge Organisation System for vocabularies and thesauri. | 5, 8, App D |
+| **SPARQL** | W3C | Query language for RDF data. | 5, 19 |
+| **Cypher** | Neo4j/GQL | Graph query language for property graphs. | 5, 19 |
+| **JSON-LD** | W3C | JSON-based Linked Data serialisation format. | 19 |
+| **Turtle** | W3C | Terse RDF Triple Language. Compact RDF serialisation. | 19, App D |
+
+## Algorithms
+
+| Algorithm | Description | Chapters |
+|-----------|-------------|----------|
+| **Aho-Corasick** | Multi-pattern string matching in linear time. Foundation for Terraphim's deterministic search. | 6, 7 |
+| **PageRank** | Graph centrality algorithm for ranking nodes by connectivity. Applicable to KG result ranking. | 7, 21 |
+| **Cosine Similarity** | Vector similarity measure used in embedding-based search. | 6 |
+| **TF-IDF** | Term frequency-inverse document frequency for classical text ranking. | 6 |
+
+## Development Tools
+
+| Tool | Purpose | Chapters |
+|------|---------|----------|
+| **Claude Code** | AI coding assistant with CLAUDE.md support. Reference implementation for context engineering patterns. | 13, 16 |
+| **OpenClaw** | AI assistant platform with layered memory, skill system, and autonomous heartbeat loops. | 17 |
+| **Quarto** | Scientific publishing system. Used to produce this book. | -- |
+
+## Context Engineering Frameworks
+
+| Framework | Description | Chapters |
+|-----------|-------------|----------|
+| **Progressive Disclosure** | UI design pattern applied to context: show only what is needed, reveal more on demand. | 10, 12 |
+| **Constitutional Context** | Files that define AI identity and must never be compressed or dropped. | 10, 17 |
+| **KLS (Knowledge Layer Schema)** | Custom validation protocol for AI-generated content across conceptual, structural, and semantic dimensions. | 14 |
+| **Token Budget Architecture** | Systematic approach to allocating context window tokens across categories. | 10, App B |
+| **Hybrid Pipeline** | Retrieval architecture combining deterministic, semantic, and graph methods. | 19 |
+
+## Research Papers and Articles
+
+| Reference | Relevance | Chapters |
+|-----------|-----------|----------|
+| Karpathy, A. (2025). "Vibe Coding" and LLM coding guidelines. | Operational discipline for AI-assisted development. | 3, 13 |
+| Hrishi & Prithvi (Anthropic). Build-review codon loops. | Multi-agent coordination with context walls. | 15 |
+| FLAURA Trial. Osimertinib 80mg for EGFR-mutated NSCLC. | Reference for KG grounding safety case study. | 9 |
+| "Some Simple Economics of AGI" analysis. Verification bottleneck. | Economics of AI verification at scale. | 1, 22 |
+| LLM-as-a-Judge best practices. | Evaluation methodology: ensemble judging, bias cataloguing, calibration. | 14, 22 |
+| Context Graphs: From RAG to Autonomous Learning. | Eight-step progression from basic RAG to self-describing context stores. | 5, 19 |
+
+## Clinical References
+
+| Reference | Relevance | Chapters |
+|-----------|-----------|----------|
+| **SNOMED CT** | Systemised Nomenclature of Medicine. 1.4M+ clinical terms used in Terraphim healthcare demo. | 6, 7, 9 |
+| **FLAURA Trial** | Phase III clinical trial establishing Osimertinib 80mg daily for first-line EGFR-mutated NSCLC treatment. | 9 |
+
+## Key Sources
+
+- Individual chapter "Key Sources" sections
+- Terraphim AI technical documentation
+- W3C Semantic Web standards
+- Neo4j graph data science documentation

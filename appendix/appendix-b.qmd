@@ -1,7 +1,289 @@
 # Appendix B: Token Tracker Implementation
 
-*TODO: Write content*
+This appendix provides a reference implementation for a **token tracking system** that monitors context composition, enforces budgets, and triggers compression when thresholds are exceeded.
 
-## Content
+The design follows the token budget architecture described in Chapter 10.
 
-TODO
+## Token Estimation
+
+Before tracking tokens, you need to estimate them. Exact tokenisation requires model-specific tokenisers, but a practical approximation works for budget management:
+
+```javascript
+// Approximate token estimation
+// English text averages ~4 characters per token
+// Code averages ~3.5 characters per token
+// YAML/JSON averages ~3 characters per token
+function estimateTokens(text, type = "text") {
+  const charsPerToken = {
+    text: 4,
+    code: 3.5,
+    yaml: 3,
+    json: 3
+  };
+
+  const ratio = charsPerToken[type] ?? 4;
+  return Math.ceil(text.length / ratio);
+}
+
+// For precise counting, use a tokeniser library
+// import { encode } from "tiktoken";
+// function countTokens(text) { return encode(text).length; }
+```
+
+## Token Tracker
+
+The tracker maintains a running count of tokens by category and raises alerts when thresholds are crossed.
+
+```javascript
+class TokenTracker {
+  constructor(config = {}) {
+    this.budget = {
+      constitutional: 0,
+      skillCatalog: 0,
+      activeSkills: 0,
+      memory: 0,
+      working: 0,
+      buffer: 0
+    };
+
+    this.limits = {
+      warn: config.warnAt ?? 12000,
+      critical: config.criticalAt ?? 15000,
+      hard: config.hardLimit ?? 20000
+    };
+
+    this.history = [];
+    this.alerts = [];
+  }
+
+  // Update a category
+  set(category, tokens) {
+    if (!(category in this.budget)) {
+      throw new Error(`Unknown budget category: ${category}`);
+    }
+    this.budget[category] = tokens;
+    this.check();
+  }
+
+  // Increment a category
+  add(category, tokens) {
+    this.set(category, this.budget[category] + tokens);
+  }
+
+  // Get total usage
+  get total() {
+    return Object.values(this.budget).reduce((a, b) => a + b, 0);
+  }
+
+  // Get remaining budget
+  get remaining() {
+    return this.limits.warn - this.total;
+  }
+
+  // Get usage as percentage of warning threshold
+  get usagePercent() {
+    return Math.round((this.total / this.limits.warn) * 100);
+  }
+
+  // Check thresholds and raise alerts
+  check() {
+    const total = this.total;
+
+    if (total > this.limits.hard) {
+      this.alert("HARD_LIMIT", `Token count ${total} exceeds hard limit ${this.limits.hard}`);
+      return "hard_limit";
+    }
+
+    if (total > this.limits.critical) {
+      this.alert("CRITICAL", `Token count ${total} exceeds critical threshold ${this.limits.critical}`);
+      return "critical";
+    }
+
+    if (total > this.limits.warn) {
+      this.alert("WARNING", `Token count ${total} exceeds warning threshold ${this.limits.warn}`);
+      return "warning";
+    }
+
+    return "ok";
+  }
+
+  alert(level, message) {
+    const entry = {
+      level,
+      message,
+      total: this.total,
+      breakdown: { ...this.budget },
+      timestamp: Date.now()
+    };
+
+    this.alerts.push(entry);
+  }
+
+  // Record a snapshot for history
+  snapshot() {
+    this.history.push({
+      total: this.total,
+      breakdown: { ...this.budget },
+      timestamp: Date.now()
+    });
+  }
+
+  // Get a formatted breakdown
+  report() {
+    const lines = [];
+    lines.push(`Token Budget Report (${this.usagePercent}% of warning threshold)`);
+    lines.push("─".repeat(50));
+
+    for (const [category, tokens] of Object.entries(this.budget)) {
+      const bar = "█".repeat(Math.round(tokens / 200));
+      const pct = Math.round((tokens / this.total) * 100);
+      lines.push(`  ${category.padEnd(16)} ${String(tokens).padStart(6)} (${pct}%) ${bar}`);
+    }
+
+    lines.push("─".repeat(50));
+    lines.push(`  ${"TOTAL".padEnd(16)} ${String(this.total).padStart(6)}`);
+    lines.push(`  ${"Remaining".padEnd(16)} ${String(this.remaining).padStart(6)}`);
+
+    return lines.join("\n");
+  }
+}
+```
+
+## Budget Allocation Presets
+
+Pre-defined allocations for common scenarios:
+
+```javascript
+const BUDGET_PRESETS = {
+  // Standard: balanced allocation for general use
+  standard: {
+    constitutional: 2000,
+    skillCatalog: 100,
+    activeSkills: 5000,
+    memory: 2000,
+    working: 2000,
+    buffer: 900
+  },
+
+  // Skill-heavy: more room for active skills
+  skillHeavy: {
+    constitutional: 2000,
+    skillCatalog: 200,
+    activeSkills: 7000,
+    memory: 1500,
+    working: 1500,
+    buffer: 800
+  },
+
+  // Memory-heavy: more room for conversation history
+  memoryHeavy: {
+    constitutional: 2000,
+    skillCatalog: 100,
+    activeSkills: 3000,
+    memory: 4000,
+    working: 2000,
+    buffer: 900
+  },
+
+  // Minimal: tight budget for smaller models
+  minimal: {
+    constitutional: 1500,
+    skillCatalog: 100,
+    activeSkills: 3000,
+    memory: 1000,
+    working: 1000,
+    buffer: 400
+  }
+};
+
+function createTrackerWithPreset(preset) {
+  const alloc = BUDGET_PRESETS[preset];
+  if (!alloc) throw new Error(`Unknown preset: ${preset}`);
+
+  const tracker = new TokenTracker({
+    warnAt: Object.values(alloc).reduce((a, b) => a + b, 0),
+    criticalAt: Math.round(Object.values(alloc).reduce((a, b) => a + b, 0) * 1.25),
+    hardLimit: Math.round(Object.values(alloc).reduce((a, b) => a + b, 0) * 1.5)
+  });
+
+  return tracker;
+}
+```
+
+## Compression Trigger
+
+When the tracker raises an alert, the compression pipeline activates:
+
+```javascript
+function onBudgetAlert(tracker, context) {
+  const status = tracker.check();
+
+  if (status === "warning") {
+    // Soft compression: summarise old memory, drop optional skills
+    context.memory = summariseOldTurns(context.memory, keepLast: 5);
+    tracker.set("memory", estimateTokens(context.memory));
+  }
+
+  if (status === "critical") {
+    // Hard compression: drop all non-core skills, aggressive summarisation
+    context.activeSkills = context.activeSkills.filter(s => s.tier === "core");
+    context.memory = summariseOldTurns(context.memory, keepLast: 2);
+
+    tracker.set("activeSkills", context.activeSkills.reduce(
+      (sum, s) => sum + estimateTokens(s.content), 0
+    ));
+    tracker.set("memory", estimateTokens(context.memory));
+  }
+
+  if (status === "hard_limit") {
+    // Emergency: constitutional only
+    context.activeSkills = [];
+    context.memory = extractKeyFacts(context.memory);
+    context.working = truncateToEssentials(context.working);
+
+    tracker.set("activeSkills", 0);
+    tracker.set("memory", estimateTokens(context.memory));
+    tracker.set("working", estimateTokens(context.working));
+  }
+}
+```
+
+## Usage Example
+
+```javascript
+const tracker = createTrackerWithPreset("standard");
+
+// Set constitutional (never changes)
+tracker.set("constitutional", 2000);
+tracker.set("skillCatalog", 250);
+
+// As skills activate
+tracker.set("activeSkills", 3500);
+
+// As conversation grows
+tracker.set("memory", 1800);
+tracker.set("working", 1200);
+
+// Check status
+console.log(tracker.report());
+// Token Budget Report (73% of warning threshold)
+// ──────────────────────────────────────────────────
+//   constitutional    2000 (23%) ██████████
+//   skillCatalog       250 ( 3%) █
+//   activeSkills      3500 (40%) █████████████████
+//   memory            1800 (21%) █████████
+//   working           1200 (14%) ██████
+//   buffer               0 ( 0%)
+// ──────────────────────────────────────────────────
+//   TOTAL             8750
+//   Remaining         3250
+
+// Take a snapshot for history
+tracker.snapshot();
+```
+
+## Key Sources
+
+- Chapter 10: Token Budget Architecture (12,000 token rule, allocation breakdown)
+- Chapter 11: Compression Strategies (priority order: dedupe, summarise, truncate, drop)
+- Chapter 12: Skill Architecture (skill activation/deactivation lifecycle)

@@ -4,7 +4,7 @@ In the previous chapter, we compared deterministic search to vector embeddings a
 
 The key insight is that instead of compressing knowledge into vectors (which loses information), Terraphim preserves the full graph structure and adds a deterministic scoring layer on top.
 
-An important scope clarification: Terraphim delivers 100% precision and recall *for terms that exist in its vocabulary*. This is not a trivial achievement -- it means zero false positives and zero missed matches within the known domain. But it is also not magic: the challenge is not accuracy for known terms, it is **coverage for unknown terms**. When a query uses terminology outside the vocabulary, Terraphim cannot match it. Chapter 19 addresses this limitation through hybrid pipelines that combine deterministic search with semantic methods for novel queries.
+An important scope clarification: Terraphim delivers 100% precision and recall *for terms that exist in its vocabulary* -- what we call **deterministic precision** throughout this book. This is not a trivial achievement -- it means zero false positives and zero missed matches within the known domain. But it is also not magic: the challenge is not accuracy for known terms, it is **coverage for unknown terms**. When a query uses terminology outside the vocabulary, Terraphim cannot match it. Chapter 19 addresses this limitation through hybrid pipelines that combine deterministic search with semantic methods for novel queries.
 
 ## Explicit Relationships vs Inferred Similarity
 

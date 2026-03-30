@@ -1,7 +1,267 @@
 # Appendix A: Context Optimizer Skill (SKILL.md)
 
-*TODO: Write content*
+This appendix provides a reference implementation for a **context optimizer skill** -- a self-contained module that manages token budgets, skill activation, and compression within an AI agent system.
 
-## Content
+The skill follows the architecture described in Chapter 12 and the token budget principles from Chapter 10.
 
-TODO
+## SKILL.md Format
+
+Every skill in a context-engineered system is defined by a `SKILL.md` file. This is both human-readable documentation and machine-parseable configuration.
+
+```markdown
+# Context Optimizer
+
+## Identity
+- Name: context-optimizer
+- Tier: core
+- Version: 1.0.0
+
+## Triggers
+- context
+- tokens
+- budget
+- compress
+- optimize
+
+## Description
+Manages token budget allocation, skill activation/deactivation,
+and context compression. Runs automatically when context usage
+exceeds warning thresholds.
+
+## Dependencies
+- None (this skill is self-contained)
+
+## Configuration
+- max_active_skills: 5
+- token_warning_threshold: 12000
+- token_critical_threshold: 15000
+- auto_deactivate_after: 10  # turns
+
+## Tools Required
+- File read (for loading skill content)
+- Token counter (for budget tracking)
+```
+
+## Reference Implementation
+
+### Skill Loader
+
+The skill loader reads `SKILL.md` files and parses them into a structured format:
+
+```javascript
+function parseSkillMd(content) {
+  const sections = {};
+  let currentSection = null;
+
+  for (const line of content.split("\n")) {
+    if (line.startsWith("## ")) {
+      currentSection = line.slice(3).trim().toLowerCase();
+      sections[currentSection] = [];
+    } else if (currentSection && line.trim()) {
+      sections[currentSection].push(line.trim());
+    }
+  }
+
+  return {
+    name: extractField(sections, "identity", "Name"),
+    tier: extractField(sections, "identity", "Tier"),
+    version: extractField(sections, "identity", "Version"),
+    triggers: extractList(sections, "triggers"),
+    description: sections["description"]?.join(" ") ?? "",
+    dependencies: extractList(sections, "dependencies"),
+    config: extractKeyValues(sections, "configuration")
+  };
+}
+
+function extractField(sections, section, field) {
+  const line = sections[section]?.find(l => l.startsWith(`- ${field}:`));
+  return line?.split(":").slice(1).join(":").trim() ?? null;
+}
+
+function extractList(sections, section) {
+  return (sections[section] ?? [])
+    .filter(l => l.startsWith("- "))
+    .map(l => l.slice(2).trim());
+}
+
+function extractKeyValues(sections, section) {
+  const config = {};
+  for (const line of sections[section] ?? []) {
+    if (line.startsWith("- ") && line.includes(":")) {
+      const [key, ...rest] = line.slice(2).split(":");
+      const value = rest.join(":").trim();
+      config[key.trim()] = isNaN(value) ? value : Number(value);
+    }
+  }
+  return config;
+}
+```
+
+### Context Optimizer Core
+
+The optimizer manages the full lifecycle: activation, budget tracking, compression, and deactivation.
+
+```javascript
+class ContextOptimizer {
+  constructor(skillCatalog, config = {}) {
+    this.catalog = skillCatalog;
+    this.activeSkills = new Map();
+    this.turnCounter = 0;
+
+    this.maxActive = config.max_active_skills ?? 5;
+    this.warnAt = config.token_warning_threshold ?? 12000;
+    this.criticalAt = config.token_critical_threshold ?? 15000;
+    this.deactivateAfter = config.auto_deactivate_after ?? 10;
+  }
+
+  // Main entry point: called each turn
+  async optimizeContext(userQuery, currentContext) {
+    this.turnCounter++;
+
+    // 1. Determine which skills should be active
+    const candidates = this.findCandidates(userQuery);
+
+    // 2. Activate new skills (up to limit)
+    for (const candidate of candidates) {
+      if (!this.activeSkills.has(candidate.name)) {
+        await this.activate(candidate);
+      } else {
+        this.activeSkills.get(candidate.name).lastUsedTurn = this.turnCounter;
+      }
+    }
+
+    // 3. Deactivate stale skills
+    this.deactivateStale();
+
+    // 4. Enforce limit
+    this.enforceLimits();
+
+    // 5. Check budget
+    const budget = this.calculateBudget(currentContext);
+
+    if (budget.total > this.criticalAt) {
+      this.compress(currentContext);
+    }
+
+    return {
+      activeSkills: [...this.activeSkills.values()],
+      budget,
+      compressed: budget.total > this.warnAt
+    };
+  }
+
+  findCandidates(query) {
+    const q = query.toLowerCase();
+    return this.catalog
+      .filter(skill => skill.triggers.some(t => q.includes(t)))
+      .sort((a, b) => {
+        const tierOrder = { core: 0, standard: 1, optional: 2 };
+        return (tierOrder[a.tier] ?? 2) - (tierOrder[b.tier] ?? 2);
+      });
+  }
+
+  async activate(skill) {
+    const content = await loadSkillContent(skill.name);
+    this.activeSkills.set(skill.name, {
+      ...skill,
+      content,
+      tokens: estimateTokens(content),
+      activatedTurn: this.turnCounter,
+      lastUsedTurn: this.turnCounter
+    });
+  }
+
+  deactivateStale() {
+    for (const [name, skill] of this.activeSkills) {
+      if (this.turnCounter - skill.lastUsedTurn > this.deactivateAfter) {
+        this.activeSkills.delete(name);
+      }
+    }
+  }
+
+  enforceLimits() {
+    if (this.activeSkills.size <= this.maxActive) return;
+
+    const sorted = [...this.activeSkills.entries()]
+      .sort(([, a], [, b]) => {
+        const tierOrder = { core: 0, standard: 1, optional: 2 };
+        const tierDiff = (tierOrder[a.tier] ?? 2) - (tierOrder[b.tier] ?? 2);
+        if (tierDiff !== 0) return tierDiff;
+        return b.lastUsedTurn - a.lastUsedTurn;
+      });
+
+    // Keep top N, remove the rest
+    const toRemove = sorted.slice(this.maxActive);
+    for (const [name] of toRemove) {
+      this.activeSkills.delete(name);
+    }
+  }
+
+  calculateBudget(context) {
+    const constitutional = context.constitutionalTokens ?? 2000;
+    const catalog = estimateTokens(JSON.stringify(this.catalog));
+    const skills = [...this.activeSkills.values()]
+      .reduce((sum, s) => sum + s.tokens, 0);
+    const memory = context.memoryTokens ?? 0;
+    const working = context.workingTokens ?? 0;
+
+    return {
+      constitutional,
+      catalog,
+      skills,
+      memory,
+      working,
+      total: constitutional + catalog + skills + memory + working
+    };
+  }
+
+  compress(context) {
+    // Priority: drop optional skills first, then summarise memory
+    const optional = [...this.activeSkills.entries()]
+      .filter(([, s]) => s.tier === "optional");
+
+    for (const [name] of optional) {
+      this.activeSkills.delete(name);
+    }
+  }
+}
+```
+
+### Usage Example
+
+```javascript
+// Load catalog at startup (~200-300 tokens)
+const catalog = await loadSkillCatalog("skills/catalog.yaml");
+
+// Create optimizer
+const optimizer = new ContextOptimizer(catalog);
+
+// Each turn
+const result = await optimizer.optimizeContext(
+  userQuery,
+  { constitutionalTokens: 2000, memoryTokens: 1500, workingTokens: 800 }
+);
+
+console.log(`Active: ${result.activeSkills.map(s => s.name).join(", ")}`);
+console.log(`Budget: ${result.budget.total} tokens`);
+```
+
+## File Structure
+
+A complete context optimizer skill lives in a single directory:
+
+```
+skills/
+  context-optimizer/
+    SKILL.md              # Skill definition (shown above)
+    optimizer.js          # Core implementation
+    tests/
+      optimizer.test.js   # Unit tests
+```
+
+## Key Sources
+
+- Chapter 10: Token Budget Architecture (budget allocation)
+- Chapter 11: Compression Strategies (compression priority order)
+- Chapter 12: Skill Architecture for AI Agents (catalog, activation, deactivation)
+- OpenClaw context management (production patterns)

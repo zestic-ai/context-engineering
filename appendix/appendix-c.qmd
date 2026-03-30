@@ -1,7 +1,206 @@
 # Appendix C: Skill Catalog Schema
 
-*TODO: Write content*
+This appendix defines the complete schema for skill catalogs used in context-engineered AI agent systems. The schema covers the lightweight catalog format (loaded at startup) and the full SKILL.md format (loaded on activation).
 
-## Content
+## Catalog Entry Schema (YAML)
 
-TODO
+The catalog is the minimal representation loaded at startup, consuming approximately 200-300 tokens for 20 skills.
+
+```yaml
+# skill-catalog.schema.yaml
+type: object
+required: [skills]
+properties:
+  skills:
+    type: array
+    items:
+      type: object
+      required: [name, triggers, tier]
+      properties:
+        name:
+          type: string
+          description: "Unique skill identifier (kebab-case)"
+          pattern: "^[a-z][a-z0-9-]*$"
+          examples: ["web-search", "terraphim-memory", "file-editor"]
+
+        triggers:
+          type: array
+          items:
+            type: string
+          minItems: 2
+          maxItems: 10
+          description: "Keywords that activate this skill"
+
+        tier:
+          type: string
+          enum: [core, standard, optional]
+          description: >
+            Priority tier for activation and eviction.
+            core: always preferred, last to evict.
+            standard: normal priority.
+            optional: first to evict under pressure.
+
+        estimated_tokens:
+          type: integer
+          minimum: 100
+          maximum: 5000
+          description: "Expected token cost when fully loaded"
+
+        dependencies:
+          type: array
+          items:
+            type: string
+          description: "Other skills required (loaded together)"
+
+        auto_deactivate:
+          type: integer
+          minimum: 1
+          default: 10
+          description: "Turns of non-use before automatic eviction"
+
+        compression_priority:
+          type: integer
+          minimum: 1
+          description: "Drop order when budget is exceeded (1 = first to drop)"
+```
+
+## Example Catalog
+
+A production catalog for an AI coding assistant:
+
+```yaml
+skills:
+  # Core skills (always preferred)
+  - name: file-editor
+    triggers: ["edit", "modify", "change", "update", "write", "fix"]
+    tier: core
+    estimated_tokens: 600
+
+  - name: code-runner
+    triggers: ["run", "execute", "command", "bash", "shell", "terminal"]
+    tier: core
+    estimated_tokens: 400
+
+  - name: terraphim-memory
+    triggers: ["memory", "recall", "remember", "kg", "knowledge", "search"]
+    tier: core
+    estimated_tokens: 1200
+
+  # Standard skills
+  - name: web-search
+    triggers: ["search", "web", "find", "lookup", "google"]
+    tier: standard
+    estimated_tokens: 800
+
+  - name: git-operations
+    triggers: ["git", "commit", "branch", "merge", "push", "pull"]
+    tier: standard
+    estimated_tokens: 700
+
+  - name: database-query
+    triggers: ["database", "sql", "query", "table", "schema"]
+    tier: standard
+    estimated_tokens: 900
+
+  - name: test-runner
+    triggers: ["test", "spec", "assert", "coverage", "jest", "pytest"]
+    tier: standard
+    estimated_tokens: 500
+
+  - name: documentation
+    triggers: ["docs", "readme", "document", "explain", "comment"]
+    tier: standard
+    estimated_tokens: 600
+
+  # Optional skills (first to evict)
+  - name: image-processor
+    triggers: ["image", "picture", "screenshot", "diagram", "png"]
+    tier: optional
+    estimated_tokens: 1000
+    compression_priority: 1
+
+  - name: calendar
+    triggers: ["calendar", "meeting", "schedule", "event", "agenda"]
+    tier: optional
+    estimated_tokens: 500
+    compression_priority: 2
+```
+
+## SKILL.md Schema
+
+The full skill definition loaded when a skill is activated:
+
+```markdown
+# [Skill Name]
+
+## Identity
+- Name: [kebab-case identifier]
+- Tier: [core | standard | optional]
+- Version: [semver]
+
+## Triggers
+- [trigger word 1]
+- [trigger word 2]
+- [trigger word N]
+
+## Description
+[What this skill does, in 1-3 sentences]
+
+## Dependencies
+- [other-skill-name]
+- None
+
+## Configuration
+- [key]: [value]
+
+## Tools Required
+- [Tool 1 description]
+- [Tool 2 description]
+
+## Prompt Template
+[The actual prompt or instructions used when this skill is active]
+
+## Examples
+[Input/output examples showing expected behaviour]
+```
+
+### Constraints
+
+| Field | Required | Constraint |
+|-------|----------|------------|
+| Name | Yes | Must match catalog entry name |
+| Tier | Yes | Must match catalog entry tier |
+| Version | Yes | Semantic versioning (MAJOR.MINOR.PATCH) |
+| Triggers | Yes | Must be superset of catalog triggers |
+| Description | Yes | Max 500 characters |
+| Dependencies | No | Must reference valid skill names |
+| Configuration | No | Key-value pairs only |
+| Tools Required | No | Informational (not enforced) |
+| Prompt Template | Yes | The core content loaded into context |
+| Examples | No | Recommended for complex skills |
+
+## Tier Behaviour
+
+| Property | Core | Standard | Optional |
+|----------|------|----------|----------|
+| Activation priority | First | Second | Third |
+| Eviction order | Last | Middle | First |
+| Max simultaneous | 3 | 2 | 1 |
+| Budget allocation | 60% | 30% | 10% |
+| Auto-deactivate | 20 turns | 10 turns | 5 turns |
+
+## Trigger Design Guidelines
+
+1. **Minimum 2 triggers** per skill (avoids single-point activation failures)
+2. **Maximum 10 triggers** per skill (more causes false positives)
+3. **No single-character triggers** (too generic)
+4. **Minimise overlap** between skills (if unavoidable, tier priority resolves conflicts)
+5. **Include synonyms** (e.g., "search", "find", "lookup" for the same skill)
+6. **Include domain terms** (e.g., "kubernetes", "k8s", "kubectl" for a K8s skill)
+
+## Key Sources
+
+- Chapter 12: Skill Architecture for AI Agents (catalog structure, activation patterns)
+- Chapter 10: Token Budget Architecture (budget allocation per type)
+- Terraphim knowledge graph configuration (role-based skill definitions)
+- OpenClaw skill loading patterns (production implementation)
