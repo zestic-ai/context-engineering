@@ -448,6 +448,110 @@ Use deterministic validation instead when:
 
 LLM-as-Judge is most valuable in the middle ground: outputs that are too nuanced for rule-based checks but too numerous for full human review.
 
+## Where Validation Criteria Come From: Context Engineering Meets Spec-Driven Development
+
+The validation layers above -- KLS, pre-LLM checks, drift detection, LLM-as-Judge -- share a hidden dependency. Each one requires **criteria**: a schema to validate against, a knowledge graph to ground against, a rubric for the judge to score against. Where do those criteria come from?
+
+If the criteria are wrong, perfect verification still produces wrong outputs. A flawless type checker enforcing an incorrect domain contract protects nothing. A BDD scenario that encodes a misunderstood business rule will pass every time, confirming the wrong behaviour. Validation is only as trustworthy as the specifications it enforces.
+
+This is the upstream problem that connects everything in this book. In Chapter 3, we established context engineering as the discipline of managing semantic alignment -- ensuring that every participant (human and machine) shares the same understanding of the problem space. In Chapter 4, we introduced the reconciled domain model as the anchor: the shared vocabulary of entities, relationships, and invariants that defines what the system means. The validation layers in this chapter are the *downstream operationalisation* of that upstream work. But we have not yet made the connection explicit. A complementary discipline -- **spec-driven development** -- provides the missing link.
+
+### The Two-Layer Model
+
+Context engineering and spec-driven development are complementary layers, not competing approaches. They operate at different altitudes and answer different questions:
+
+| | Context Engineering | Spec-Driven Development |
+|---|---|---|
+| **Operates at** | Problem space | Solution space |
+| **Primary artefact** | Reconciled domain model | Executable specifications |
+| **Question answered** | "Does everyone mean the same thing?" | "Is the generated output correct?" |
+| **Human role** | Curate semantic alignment | Define acceptance criteria |
+| **Failure mode** | Agents do the wrong thing coherently | Agents do the right thing incorrectly |
+| **Automation** | KG search, hooks, CLAUDE.md | Test runners, type checkers, verification agents |
+
+The relationship is sequential. Context engineering produces the domain model -- the shared understanding of entities, relationships, and business rules. Spec-driven development consumes that model and transforms it into executable specifications: BDD scenarios, domain contracts, acceptance criteria. Those specifications then feed the validation layers described earlier in this chapter.
+
+```
+Reconciled Domain Model (Ch 3-4)
+        ↓
+Executable Specifications (BDD, contracts)
+        ↓
+Validation Layers (KLS, deterministic, LLM judge)
+        ↓
+Generated Output (agent code, content, decisions)
+        ↓
+Feedback (drift detection, calibration) → back to domain model
+```
+
+This maps directly to a stage-gated lifecycle. In the Zestic AI Development Process (discussed further in Chapter 18), the Discovery and Define stages are context engineering: building the domain model, establishing vocabulary, aligning stakeholders. The Design and Develop stages are spec-driven development: translating that context into specifications and implementing against them. The two layers are not separate activities bolted together -- they are the upstream and downstream halves of a single quality pipeline.
+
+The critical insight: **you need a reconciled domain model before specifications are meaningful**. A BDD scenario that says "Given a user with insufficient funds" only works if everyone agrees on what "user," "insufficient," and "funds" mean in this domain. Without upstream context engineering, specs encode assumptions that may be wrong -- and the verification machinery will happily confirm those wrong assumptions at every gate.
+
+### The Swiss Cheese Model of Verification
+
+Ankit Jain, writing in Latent Space, articulates why this two-layer model matters for AI-native development. His argument: human code review was not ubiquitous until 2012-2014, and it is now an unsustainable bottleneck. Teams with high AI adoption merge 98% more pull requests, but review time increases by 91%. The solution is not faster review -- it is layered verification that moves human judgement upstream from "Did you write this correctly?" to "Are we solving the right problem?"
+
+Jain proposes a five-layer Swiss Cheese model, where each layer catches failures that the others miss:
+
+**Layer 1: Compare multiple options.** Ask three agents to implement independently. Rank by verification pass rate, smallest diff, or fewest new dependencies. This is a competition pattern -- the agents do not collaborate, they compete, and the best output wins.
+
+**Layer 2: Deterministic guardrails.** Tests, type checkers, contract verification -- pass/fail artefacts, not opinions. This maps directly to the pre-LLM validation layers earlier in this chapter: syntax checking, semantic validation, and knowledge graph grounding. These guardrails enforce what is computable without intelligence.
+
+**Layer 3: Humans define acceptance criteria.** BDD specifications authored by humans before any code is generated. The specification is the primary artefact, not additional documentation. The agent implements; the BDD framework verifies; the human never reads the implementation unless verification fails. This is the spec-driven development layer -- and it depends on the context engineering upstream to ensure the specs themselves are correct.
+
+**Layer 4: Permission systems as architecture.** Narrow the filesystem scope per task. Trigger automatic human review for sensitive changes: authentication logic, database schema modifications, new dependencies. This is scope management, not intelligence -- a structural constraint that limits blast radius regardless of agent confidence.
+
+**Layer 5: Adversarial verification.** Separate the coding agent from the verification agent architecturally. The agent that writes the code never reviews its own output. An optional red-team agent attempts to break what the first agent built. This connects to the build-review codon loops discussed in the next chapter, where context-walled agents evaluate each other's work with fresh eyes.
+
+No single layer is sufficient. The power comes from composition: if a wrong assumption passes through the domain model (Layer 3 missed it), the deterministic guardrails (Layer 2) might catch the resulting type violation. If the type system is too permissive, the adversarial agent (Layer 5) might find the flaw. Defence in depth means that failures must penetrate every layer simultaneously to reach production.
+
+### BDD Specifications as the Bridge Artefact
+
+Behaviour-Driven Development specifications occupy a unique position in this architecture. They are the artefact that bridges upstream context and downstream verification -- human-readable enough to validate against the domain model, machine-executable enough to serve as automated tests.
+
+A BDD scenario has a precise structure:
+
+```gherkin
+Feature: Fund Transfers
+
+  Scenario: Insufficient funds
+    Given a user with 50 GBP in their account
+    When they attempt to transfer 100 GBP
+    Then the transfer is blocked
+    And an InsufficientFunds error is returned
+    And the account balance remains 50 GBP
+```
+
+Every noun in this scenario -- "user," "account," "GBP," "transfer," "InsufficientFunds" -- should be a term in the reconciled domain model. Every relationship -- a user *has* an account, a transfer *debits* an account -- should match the model's entity relationships. Every constraint -- "the account balance remains 50 GBP" -- should derive from a documented business invariant. If any of these terms are undefined or ambiguous in the domain model, the specification is built on sand.
+
+This is where context engineering directly feeds spec-driven development. The domain model provides the vocabulary; the BDD spec uses that vocabulary to express testable behaviour; the validation layers execute those tests against the generated implementation. The human's job shifts from reviewing code to reviewing specifications -- a fundamentally different activity that operates at a higher level of abstraction.
+
+The workflow becomes:
+
+1. **Context engineering** produces the domain model (entities, relationships, invariants)
+2. **Humans write BDD specs** using domain model vocabulary
+3. **Agents implement** against the specs (humans do not review the code)
+4. **Automated verification** runs the BDD scenarios, type checks, and contract validation
+5. **Failures feed back** to either the spec (if the requirement was unclear) or the agent (if the implementation was wrong)
+
+Human time concentrates on steps 1 and 2 -- understanding the domain and expressing requirements. Agent time concentrates on step 3. Verification is automated. This is the practical expression of the two-layer model: context engineering ensures the specs are right; spec-driven development ensures the code matches the specs.
+
+Tools like Spec-Kit (an open-source toolkit with wide adoption across AI coding assistants) operationalise this workflow with a five-phase process: constitution (project-wide rules), specification (user scenarios), plan (technical design), tasks (executable work items), and implementation. The parallels to this book's approach are direct -- the constitution maps to CLAUDE.md (Chapter 13), the specification phase maps to the BDD layer described here, and the planning phase maps to the domain model work in Chapters 3-4. The key difference is that Spec-Kit assumes context is given (starting from a constitution), while context engineering treats context as the thing that must be engineered first.
+
+### Implications for the Validation Architecture
+
+This synthesis reshapes how we think about the validation layers described earlier in this chapter:
+
+**Deterministic checks** (syntax, semantics, grounding) validate against the **domain model**. When the grounding layer checks whether entities exist in the knowledge graph, it is confirming that the output uses the vocabulary established by context engineering. This is upstream validation -- checking that the right concepts are in play.
+
+**LLM-as-Judge evaluation** validates against the **BDD specifications**. When the judge scores an output against a rubric, that rubric should derive from the acceptance criteria in the specs. This is downstream validation -- checking that the output satisfies the requirements expressed in those specs.
+
+**Human review** moves upstream to **specification approval**. Instead of reviewing generated code line by line (which Jain's data shows is an unsustainable bottleneck), humans review specifications before generation begins. The question changes from "Is this code correct?" to "Does this spec capture what we actually need?" This is a fundamentally more tractable review task -- specifications are shorter, expressed in domain language, and focused on behaviour rather than implementation.
+
+The hybrid verification pipeline from the previous section gains a new dimension. It is not just deterministic-then-LLM-then-human. It is *domain-model-grounded deterministic checks*, followed by *spec-derived LLM evaluation*, followed by *upstream human spec review*. Each layer has a clear source of truth, and that source traces back through specifications to the reconciled domain model.
+
+This completes the argument of this chapter. Validation is not merely a set of technical checks applied after generation. It is the downstream operationalisation of upstream context engineering -- the mechanism by which semantic alignment becomes verifiable quality.
+
 ## Summary: Validation as Gate
 
 Validation transforms AI generation from "trust me" to "prove it":
@@ -458,8 +562,9 @@ Validation transforms AI generation from "trust me" to "prove it":
 4. **LLM-as-Judge**: Automated evaluation for nuanced quality dimensions, with bias mitigation
 5. **Impact analysis**: Know what changes affect what
 6. **CI/CD integration**: Automate validation in pipelines
+7. **Context-to-spec pipeline**: Validation criteria derive from specifications, which derive from the reconciled domain model -- context engineering upstream, spec-driven verification downstream
 
-These gates ensure that AI outputs meet standards before they reach users.
+These gates ensure that AI outputs meet standards before they reach users -- and that the standards themselves are grounded in a shared understanding of the problem space.
 
 ## Key Sources
 
@@ -468,3 +573,6 @@ These gates ensure that AI outputs meet standards before they reach users.
 - Context engineering validation patterns
 - LLM-as-Judge best practices literature (Zheng et al., MT-Bench; Huyen, AI Engineering, 2025)
 - Drift detection literature
+- Ankit Jain, "How to Kill the Code Review" (Latent Space, 2025) -- Swiss Cheese verification model
+- Spec-Kit (GitHub) -- spec-driven development toolkit
+- Dan North, "Introducing BDD" (2006) -- Behaviour-Driven Development origins
