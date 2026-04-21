@@ -320,9 +320,13 @@ Compression strategies must be systematic, not ad-hoc:
 
 The next chapter shows how to design skills to work with this compression system.
 
+## Field Evidence: Claude Code's Five-Layer Ladder
+
+Independent reverse-engineering of Claude Code v2.1.88 [@liu2026dive] documents a graduated five-tier compaction pipeline remarkably aligned with the priority order in this chapter: **Budget reduction** (replace oversized raw output with reference pointers) → **Snip** (drop low-relevance history) → **Microcompact** (cache-aware tail rewrite to preserve upstream prompt caching economics) → **Context collapse** (read-time projection that merges messages visually without data loss) → **Auto-compact** (model-summarised final resort). The same analysis finds that only 1.6% of the Claude Code codebase is AI decision logic; 98.4% is operational infrastructure, of which the compaction pipeline is a significant share. This is the strongest public evidence to date that compression is not an optimisation afterthought but a first-class architectural concern — and that the priority order matters as much as the strategies themselves.
+
 ## Key Sources
 
 - Context Optimizer skill implementation
-- Claude Code compression patterns
+- Claude Code compression patterns; reverse-engineering analysis: Liu et al., *Dive into Claude Code: The Design Space of Today's and Future AI Agent Systems*, arXiv 2604.14228v1
 - LLM context window management best practices
 - Token optimization techniques from production systems
